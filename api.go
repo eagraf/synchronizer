@@ -47,8 +47,6 @@ func (ws *WorkerService) postWorker(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var body PostBody
-	//reqBody, _ := ioutil.ReadAll(r.Body)
-	//fmt.Print(string(reqBody))
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Invalid body: %s", err.Error()), 400)
@@ -76,5 +74,13 @@ func (ws *WorkerService) postWorker(w http.ResponseWriter, r *http.Request) {
 
 // DeleteWorker removes a worker from the pool
 func (ws *WorkerService) deleteWorker(w http.ResponseWriter, r *http.Request) {
+	uuid := chi.URLParam(r, "uuid")
 
+	err := ws.wm.RemoveWorker(uuid)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to remove worker: %s", err.Error()), 400)
+		return
+	}
+
+	w.Write([]byte(""))
 }
