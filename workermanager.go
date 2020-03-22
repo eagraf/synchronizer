@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"net"
+	"sync"
 
 	"github.com/google/uuid"
 )
@@ -18,12 +19,14 @@ type Worker struct {
 
 // WorkerManager keeps a table of all active wrokers
 type WorkerManager struct {
-	Workers map[string]Worker
+	Workers     map[string]Worker
+	workerMutex sync.RWMutex
 }
 
 // WorkerManager singleton
 var wmSingleton = WorkerManager{
-	Workers: make(map[string]Worker),
+	Workers:     make(map[string]Worker),
+	workerMutex: sync.RWMutex{},
 }
 
 // GetWorkerManager returns an instance of a workermanager
@@ -40,19 +43,29 @@ func (wm *WorkerManager) AddWorker(address net.IP, workerType string) string {
 	worker.address = address
 	worker.workerType = workerType
 
+	// Get write mutex
+	wm.workerMutex.Lock()
 	// Add to workerset
 	wm.Workers[worker.UUID] = worker
+	// Release write mutex
+	wm.workerMutex.Unlock()
 
 	return worker.UUID
 }
 
 // RemoveWorker removes a woker from the workerset
 func (wm *WorkerManager) RemoveWorker(UUID string) error {
+	// Get read mutex
+	wm.workerMutex.RLock()
+	// Check if UUID exists
 	_, ok := wm.Workers[UUID]
 	if !ok {
 		return errors.New("No worker with this UUID exists")
 	}
+	// Release read mutex
+	wm.workerMutex.RUnlock()
 
+	// Delete the worker
 	delete(wm.Workers, UUID)
 	return nil
 }
