@@ -16,11 +16,18 @@ func RegisterRoutes() http.Handler {
 	workerService := GetWorkerService()
 
 	r := chi.NewRouter()
+	r.Route("/health", func(r chi.Router) {
+		r.Get("/", getHealth)
+	})
 	r.Route("/workers", func(r chi.Router) {
 		r.Post("/", workerService.postWorker)
 		r.Delete("/{uuid}/", workerService.deleteWorker)
 	})
 	return r
+}
+
+func getHealth(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte(""))
 }
 
 // WorkerService is a service abstraction for endpoints involving workers
