@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	fmt.Println("hello")
+	fmt.Println("Starting synchronizer")
 
 	/*wm := GetWorkerManager()
 	uuid := wm.AddWorker(net.IPv4(128, 0, 0, 1), "cloud")
