@@ -3,10 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 
 	"github.com/go-chi/chi"
+	"github.com/gorilla/websocket"
 )
 
 // RegisterRoutes defines routes for REST API using the chi router
@@ -21,11 +23,13 @@ func RegisterRoutes() http.Handler {
 	})
 	r.Route("/workers", func(r chi.Router) {
 		r.Post("/", workerService.postWorker)
+		r.Get("/", workerService.websocket)
 		r.Delete("/{uuid}/", workerService.deleteWorker)
 	})
 	return r
 }
 
+// getHealth responds 200 if the service is up
 func getHealth(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(""))
 }
@@ -42,6 +46,35 @@ func GetWorkerService() *WorkerService {
 		GetWorkerManager(),
 	}
 	return &ws
+}
+
+// upgrader promotes a standard HTTP/HTTPS connection to a websocket connection
+// TODO implement CheckOrigin
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	CheckOrigin:     func(*http.Request) bool { return true },
+}
+
+func (ws *WorkerService) websocket(w http.ResponseWriter, r *http.Request) {
+	// Upgrade the connection to
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	for {
+		messageType, p, err := conn.ReadMessage()
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		if err := conn.WriteMessage(messageType, p); err != nil {
+			log.Println(err)
+			return
+		}
+	}
 }
 
 // PostWorker adds a new worker to the pool
