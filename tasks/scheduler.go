@@ -38,6 +38,7 @@ func Start(taskRegistry map[string]TaskType) *TaskScheduler {
 				go ts.handleSetup(intent)
 			case "map":
 				fmt.Println("Map")
+				// Handle map task
 			case "reduce":
 				fmt.Println("Reduce")
 			case "end":
@@ -71,4 +72,9 @@ func (ts *TaskScheduler) handleSetup(intent *Intent) {
 	for _, mi := range mapIntents {
 		ts.IntentQueue <- mi
 	}
+}
+
+func (ts *TaskScheduler) handleMap(taskInstanceUUID string, intent *Intent) {
+
+	// Send task to an available worker
 }

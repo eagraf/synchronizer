@@ -38,6 +38,9 @@ func main() {
 		Input: "Chicken Butt",
 	}
 
+	wm := GetWorkerManager()
+	wm.Start()
+
 	ts := tasks.Start(taskRegistry)
 	ts.IntentQueue <- &newIntent
 
