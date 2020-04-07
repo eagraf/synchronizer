@@ -85,6 +85,7 @@ func (wm *WorkerManager) RemoveWorker(UUID string) error {
 // Start listening for incoming map tasks originated by the scheduler
 func (wm *WorkerManager) Start() {
 	// Listen for new intents and workers
+	// TODO verify this setup doesn't lead to excesive waiting / explore parallelization
 	go func() {
 		for {
 			select {

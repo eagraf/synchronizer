@@ -38,9 +38,7 @@ func Start(taskRegistry map[string]TaskType, mapTaskQueue chan *Intent) *TaskSch
 				go ts.handleSetup(intent)
 			case "map":
 				fmt.Println("Map")
-				fmt.Println(mapTaskQueue)
 				mapTaskQueue <- intent
-				fmt.Println("qua")
 				// Handle map task
 			case "reduce":
 				fmt.Println("Reduce")
