@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/eagraf/synchronizer/workers"
 	"github.com/go-chi/chi"
 	"github.com/gorilla/websocket"
 )
@@ -36,14 +37,14 @@ func getHealth(w http.ResponseWriter, r *http.Request) {
 
 // WorkerService is a service abstraction for endpoints involving workers
 type WorkerService struct {
-	wm *WorkerManager
+	wm *workers.WorkerManager
 }
 
 // GetWorkerService returns a singleton instance of the WorkerService
 // TODO singleton guarantee
 func GetWorkerService() *WorkerService {
 	ws := WorkerService{
-		GetWorkerManager(),
+		workers.GetWorkerManager(),
 	}
 	return &ws
 }

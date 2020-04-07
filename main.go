@@ -7,6 +7,7 @@ import (
 
 	"github.com/eagraf/synchronizer/tasks"
 	"github.com/eagraf/synchronizer/tasks/gameoflife"
+	"github.com/eagraf/synchronizer/workers"
 )
 
 func main() {
@@ -38,7 +39,7 @@ func main() {
 		Input: "Chicken Butt",
 	}
 
-	wm := GetWorkerManager()
+	wm := workers.GetWorkerManager()
 	wm.Start()
 
 	ts := tasks.Start(taskRegistry)
