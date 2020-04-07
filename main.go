@@ -42,7 +42,7 @@ func main() {
 	wm := workers.GetWorkerManager()
 	wm.Start()
 
-	ts := tasks.Start(taskRegistry)
+	ts := tasks.Start(taskRegistry, wm.MapTaskQueue)
 	ts.IntentQueue <- &newIntent
 
 	r := RegisterRoutes()
