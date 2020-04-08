@@ -1,12 +1,15 @@
 package workers
 
 import (
+	"bytes"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"sync"
 
 	"github.com/eagraf/synchronizer/tasks"
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 )
 
 // Worker represents a single worker device that executes tasks
@@ -15,6 +18,7 @@ import (
 type Worker struct {
 	UUID       string
 	workerType string
+	connection *websocket.Conn
 }
 
 // WorkerManager keeps a table of all active wrokers
@@ -44,11 +48,12 @@ func GetWorkerManager() *WorkerManager {
 }
 
 // AddWorker adds a worker to the workerset and returns the worker's uuid
-func (wm *WorkerManager) AddWorker(workerType string) string {
+func (wm *WorkerManager) AddWorker(workerType string, connection *websocket.Conn) string {
 	var worker Worker
 	// Generate new UUID for worker
 	worker.UUID = uuid.New().String()
 	worker.workerType = workerType
+	worker.connection = connection
 
 	// Get write mutex
 	wm.workersMutex.Lock()
@@ -83,6 +88,12 @@ func (wm *WorkerManager) RemoveWorker(UUID string) error {
 func (wm *WorkerManager) Start() {
 	// Listen for new intents and workers
 	// TODO verify this setup doesn't lead to excesive waiting / explore parallelization
+	//
+	// Currently just a naive implementation that takes the first available worker
+	// Future extensions:
+	//  - Account for device capabilities (bandwidth, compute, GPU, etc.)
+	//  - Worker management is mission critical, and should be replicated using Paxos or equivalent
+	//  - Support multischeduling workers
 	go func() {
 		for {
 			select {
@@ -95,6 +106,7 @@ func (wm *WorkerManager) Start() {
 				fmt.Printf("Allocating worker %v to task %v (intent listener)\n", worker.UUID, mapIntent.TaskUUID)
 				// Release write mutex
 				wm.allocationMutex.Unlock()
+				go wm.MessageWorker(worker.UUID, mapIntent.TaskUUID, mapIntent)
 
 			case worker := <-wm.AvailableWorkers:
 				fmt.Println("Received worker")
@@ -105,22 +117,28 @@ func (wm *WorkerManager) Start() {
 				fmt.Printf("Allocating worker %v to task %v (worker listener)\n", worker.UUID, mapIntent.TaskUUID)
 				// Release write mutex
 				wm.allocationMutex.Unlock()
+				go wm.MessageWorker(worker.UUID, mapIntent.TaskUUID, mapIntent)
 			}
-
 		}
 	}()
 }
 
-// AllocateWorker assigns a worker to a specific task
-// Currently just a naive implementation that takes the first available worker
-// Future extensions:
-//  - Account for device capabilities (bandwidth, compute, GPU, etc.)
-//  - Worker management is mission critical, and should be replicated using Paxos or equivalent
-//  - Support multischeduling workers
-func (wm *WorkerManager) AllocateWorker(taskUUID string) error {
-	if len(wm.AvailableWorkers) == 0 {
-		return errors.New("Unable to allocate worker: No workers available")
+// MessageWorker sends a map intent to a worker
+// TODO determine if WriteCloser can be fixed to work with gobs => could prevent one buffer copy
+func (wm *WorkerManager) MessageWorker(workerUUID, taskUUID string, mapIntent *tasks.Intent) error {
+	// Encode mapIntent into the buffer
+	var buffer bytes.Buffer
+	enc := gob.NewEncoder(&buffer)
+	err := enc.Encode(*mapIntent)
+	if err != nil {
+		fmt.Println(err.Error())
+		return err
 	}
-
+	// Send the gob to the worker
+	err = wm.Workers[workerUUID].connection.WriteMessage(websocket.BinaryMessage, buffer.Bytes())
+	if err != nil {
+		fmt.Println(err.Error())
+		return err
+	}
 	return nil
 }
