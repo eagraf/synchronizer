@@ -1,10 +1,8 @@
 package workers
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 
 	"github.com/go-chi/chi"
@@ -33,60 +31,32 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(*http.Request) bool { return true },
 }
 
-func (ws *WorkerService) Websocket(w http.ResponseWriter, r *http.Request) {
-	// Upgrade the connection to
+// RegisterWorker notifies the WorkerManager of a new worker, and promotes the request to a websocket connection
+func (ws *WorkerService) RegisterWorker(w http.ResponseWriter, r *http.Request) {
+	// TODO any necessary authentication code
+
+	// Upgrade connection to websocket
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
+	}
+
+	// Get worker type
+	// TODO ensure worker type is valid
+	query := r.URL.Query()
+	workerType, ok := query["workertype"]
+	if !ok {
+		conn.WriteMessage(websocket.TextMessage, []byte("No workertype included"))
+		conn.Close()
 		return
 	}
 
-	for {
-		messageType, p, err := conn.ReadMessage()
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		if err := conn.WriteMessage(messageType, p); err != nil {
-			log.Println(err)
-			return
-		}
-	}
-}
+	//fmt.Println("I am here")
+	uuid := ws.wm.AddWorker(workerType[0])
+	conn.WriteMessage(websocket.TextMessage, []byte(uuid))
 
-// PostWorker adds a new worker to the pool
-func (ws *WorkerService) PostWorker(w http.ResponseWriter, r *http.Request) {
+	// Handoff connection to messenger
 
-	// Request body must follow this format.
-	type PostBody struct {
-		IP         string `json:"ip" bson:"ip"`
-		WorkerType string `json:"workerType" bson:"workerType"`
-	}
-
-	var body PostBody
-	err := json.NewDecoder(r.Body).Decode(&body)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Invalid body: %s", err.Error()), 400)
-		return
-	}
-
-	// Parse ip from body
-	ip := net.ParseIP(body.IP)
-	if ip == nil {
-		http.Error(w, fmt.Sprintf("Invalid IP address: %s", string(body.IP)), 400)
-		return
-	}
-
-	// TODO ensure that worker type is valid enumerable
-	if body.WorkerType == "" {
-		http.Error(w, fmt.Sprintf("Invalid worker type %s", string(body.WorkerType)), 400)
-		return
-	}
-
-	// Add the worker
-	uuid := ws.wm.AddWorker(ip, body.WorkerType)
-
-	w.Write([]byte(uuid))
 }
 
 // DeleteWorker removes a worker from the pool

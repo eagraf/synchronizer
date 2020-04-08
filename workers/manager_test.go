@@ -1,7 +1,6 @@
 package workers
 
 import (
-	"net"
 	"testing"
 )
 
@@ -10,7 +9,7 @@ import (
 func TestAddRemove(t *testing.T) {
 	wm := GetWorkerManager()
 	numWorkers := len(wm.Workers)
-	uuid := wm.AddWorker(net.IPv4(128, 0, 0, 1), "cloud")
+	uuid := wm.AddWorker("cloud")
 	if len(wm.Workers) != numWorkers+1 {
 		t.Error("Worker was not successfully added")
 	}

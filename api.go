@@ -18,8 +18,8 @@ func RegisterRoutes() http.Handler {
 		r.Get("/", getHealth)
 	})
 	r.Route("/workers", func(r chi.Router) {
-		r.Post("/", workerService.PostWorker)
-		r.Get("/", workerService.Websocket)
+		//r.Post("/", workerService.PostWorker)
+		r.Get("/", workerService.RegisterWorker)
 		r.Delete("/{uuid}/", workerService.DeleteWorker)
 	})
 	return r

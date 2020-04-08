@@ -3,7 +3,6 @@ package workers
 import (
 	"errors"
 	"fmt"
-	"net"
 	"sync"
 
 	"github.com/eagraf/synchronizer/tasks"
@@ -15,7 +14,6 @@ import (
 // TODO enforce enumerated deviceTypes (i.e. "cloud", "mobile" workers)
 type Worker struct {
 	UUID       string
-	address    net.IP
 	workerType string
 }
 
@@ -46,11 +44,10 @@ func GetWorkerManager() *WorkerManager {
 }
 
 // AddWorker adds a worker to the workerset and returns the worker's uuid
-func (wm *WorkerManager) AddWorker(address net.IP, workerType string) string {
+func (wm *WorkerManager) AddWorker(workerType string) string {
 	var worker Worker
 	// Generate new UUID for worker
 	worker.UUID = uuid.New().String()
-	worker.address = address
 	worker.workerType = workerType
 
 	// Get write mutex
