@@ -1,13 +1,15 @@
 package main
 
+import "github.com/eagraf/synchronizer/workers"
+
 // Messenger handles all communication
 type Messenger struct {
-	wm *WorkerManager
+	wm *workers.WorkerManager
 }
 
 // GetMessenger generates a new messenger singleton
 // TODO ensure singularity
-func GetMessenger(wm *WorkerManager) *Messenger {
+func GetMessenger(wm *workers.WorkerManager) *Messenger {
 	m := Messenger{
 		wm,
 	}
