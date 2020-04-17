@@ -36,7 +36,19 @@ func main() {
 		Config: tasks.TaskConfig{
 			NumWorkers: 4,
 		},
-		Input: "Chicken Butt",
+		Input: map[string]interface{}{
+			"size": 8,
+			"board": []int8{
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 1, 0, 0, 0,
+				0, 0, 0, 0, 0, 1, 0, 0,
+				0, 0, 0, 1, 1, 1, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0,
+			},
+		},
 	}
 
 	wm := workers.GetWorkerManager()
