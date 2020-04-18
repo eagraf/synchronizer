@@ -33,7 +33,7 @@ func setup(intent *tasks.Intent) (*tasks.TaskInstance, []*tasks.Intent) {
 		}
 		mapIntents[i] = &tasks.Intent{
 			IntentType: "map",
-			TaskType:   intent.TaskUUID,
+			TaskType:   intent.TaskType,
 			TaskUUID:   intent.TaskUUID,
 			Config:     intent.Config,
 			Input: map[string]interface{}{
