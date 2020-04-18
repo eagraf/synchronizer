@@ -36,7 +36,7 @@ func main() {
 		TaskType:   "GOL",
 		TaskUUID:   "Hello",
 		Config: tasks.TaskConfig{
-			NumWorkers: 4,
+			NumWorkers: 1000,
 		},
 		Input: map[string]interface{}{
 			"size": 8,
