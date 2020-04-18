@@ -74,8 +74,8 @@ func (m *Messenger) SendMessage(workerUUID string, payload interface{}) {
 
 // Listening thread for
 func (m *Messenger) listen(workerUUID string, connection *websocket.Conn) {
-	fmt.Println("Listening")
 	for {
+		// Read incoming message
 		_, buffer, err := connection.ReadMessage()
 		// TODO check if error involves channel being closed
 		if err != nil {
@@ -84,14 +84,11 @@ func (m *Messenger) listen(workerUUID string, connection *websocket.Conn) {
 			return
 		}
 
-		fmt.Println(buffer)
-
+		// Unmarshal the message
 		var message interface{}
 		err = json.Unmarshal(buffer, &message)
 		if err != nil {
 			fmt.Println(err)
 		}
-
-		fmt.Println(message)
 	}
 }

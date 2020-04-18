@@ -52,8 +52,7 @@ func (ws *WorkerService) RegisterWorker(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Writeback UUID and handoff connection to WorkerManager
-	uuid := ws.wm.AddWorker(workerType[0], conn)
-	conn.WriteMessage(websocket.TextMessage, []byte(uuid))
+	_ = ws.wm.AddWorker(workerType[0], conn)
 }
 
 // DeleteWorker removes a worker from the pool

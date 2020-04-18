@@ -32,6 +32,11 @@ type WorkerManager struct {
 	allocationMutex  sync.RWMutex
 }
 
+// RegistrationResponse contains important metadata for a worker
+type RegistrationResponse struct {
+	UUID string
+}
+
 // WorkerManager singleton
 var wmSingleton = WorkerManager{
 	Workers:          make(map[string]Worker),
@@ -65,8 +70,10 @@ func (wm *WorkerManager) AddWorker(workerType string, connection *websocket.Conn
 	// Release write mutex
 	wm.workersMutex.Unlock()
 
-	// Register this worker with the messenger
-	messenger.GetMessengerSingleton().AddConnection(worker.UUID, worker.connection)
+	// Register this worker with the messenger and send a registration response
+	m := messenger.GetMessengerSingleton()
+	m.AddConnection(worker.UUID, worker.connection)
+	m.SendMessage(worker.UUID, &RegistrationResponse{worker.UUID})
 
 	return worker.UUID
 }
