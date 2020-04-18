@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/eagraf/synchronizer/messenger"
+
 	"github.com/eagraf/synchronizer/tasks"
 	"github.com/eagraf/synchronizer/tasks/gameoflife"
 	"github.com/eagraf/synchronizer/workers"
@@ -50,6 +52,8 @@ func main() {
 			},
 		},
 	}
+
+	messenger.InitializeMessenger()
 
 	wm := workers.GetWorkerManager()
 	wm.Start()

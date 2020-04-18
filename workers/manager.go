@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/eagraf/synchronizer/messenger"
+
 	"github.com/eagraf/synchronizer/tasks"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -63,6 +65,9 @@ func (wm *WorkerManager) AddWorker(workerType string, connection *websocket.Conn
 	// Release write mutex
 	wm.workersMutex.Unlock()
 
+	// Register this worker with the messenger
+	messenger.GetMessengerSingleton().AddConnection(worker.UUID, worker.connection)
+
 	return worker.UUID
 }
 
@@ -105,7 +110,8 @@ func (wm *WorkerManager) Start() {
 				fmt.Printf("Allocating worker %v to task %v (intent listener)\n", worker.UUID, mapIntent.TaskUUID)
 				// Release write mutex
 				wm.allocationMutex.Unlock()
-				go wm.MessageWorker(worker.UUID, mapIntent.TaskUUID, mapIntent)
+				//go wm.MessageWorker(worker.UUID, mapIntent.TaskUUID, mapIntent)
+				messenger.GetMessengerSingleton().SendMessage(worker.UUID, mapIntent)
 
 			case worker := <-wm.AvailableWorkers:
 				fmt.Println("Received worker")
@@ -116,7 +122,9 @@ func (wm *WorkerManager) Start() {
 				fmt.Printf("Allocating worker %v to task %v (worker listener)\n", worker.UUID, mapIntent.TaskUUID)
 				// Release write mutex
 				wm.allocationMutex.Unlock()
-				go wm.MessageWorker(worker.UUID, mapIntent.TaskUUID, mapIntent)
+
+				//go wm.MessageWorker(worker.UUID, mapIntent.TaskUUID, mapIntent)
+				messenger.GetMessengerSingleton().SendMessage(worker.UUID, mapIntent)
 			}
 		}
 	}()
