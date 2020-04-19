@@ -40,7 +40,7 @@ func setup(intent *tasks.Intent) (*tasks.TaskInstance, []*tasks.Intent) {
 			TaskUUID:   intent.TaskUUID,
 			Config:     intent.Config,
 			Input: map[string]interface{}{
-				"size": 8,
+				"size": 1024,
 				/*"board": []int8{
 					0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0,
