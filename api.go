@@ -26,6 +26,7 @@ func RegisterRoutes() http.Handler {
 	})
 	r.Route("/tasks", func(r chi.Router) {
 		r.Post("/", taskService.PostTask)
+		r.Get("/", taskService.GetTasks)
 	})
 	return r
 }

@@ -22,6 +22,17 @@ func GetTaskService() *TaskService {
 	return &ts
 }
 
+// GetTasks gets all ongoing tasks
+func (ts *TaskService) GetTasks(w http.ResponseWriter, r *http.Request) {
+	buffer, err := json.Marshal(ts.taskScheduler.CurrentTasks)
+	if err != nil {
+		http.Error(w, "Failed to marshal tasks", 500)
+		return
+	}
+
+	w.Write(buffer)
+}
+
 // PostTask asks the synchronizer to begin performing a new task
 func (ts *TaskService) PostTask(w http.ResponseWriter, r *http.Request) {
 
