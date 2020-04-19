@@ -90,5 +90,7 @@ func (m *Messenger) listen(workerUUID string, connection *websocket.Conn) {
 		if err != nil {
 			fmt.Println(err)
 		}
+		fmt.Println(buffer)
+		fmt.Println(message)
 	}
 }
