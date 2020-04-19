@@ -7,8 +7,8 @@ import (
 
 	"github.com/eagraf/synchronizer/messenger"
 
+	"github.com/eagraf/synchronizer/gameoflife"
 	"github.com/eagraf/synchronizer/tasks"
-	"github.com/eagraf/synchronizer/tasks/gameoflife"
 	"github.com/eagraf/synchronizer/workers"
 )
 
