@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 
+	"github.com/eagraf/synchronizer/tasks"
 	"github.com/eagraf/synchronizer/workers"
 	"github.com/go-chi/chi"
 )
@@ -12,6 +13,7 @@ import (
 func RegisterRoutes() http.Handler {
 
 	workerService := workers.GetWorkerService()
+	taskService := tasks.GetTaskService()
 
 	r := chi.NewRouter()
 	r.Route("/health", func(r chi.Router) {
@@ -21,6 +23,9 @@ func RegisterRoutes() http.Handler {
 		//r.Post("/", workerService.PostWorker)
 		r.Get("/", workerService.RegisterWorker)
 		r.Delete("/{uuid}/", workerService.DeleteWorker)
+	})
+	r.Route("/tasks", func(r chi.Router) {
+		r.Post("/", taskService.PostTask)
 	})
 	return r
 }

@@ -18,9 +18,10 @@ type GOLState struct {
 
 // GOLTaskType defines the code needed to execute game of life
 var GOLTaskType = tasks.TaskType{
-	Name:   "GOL",
-	Setup:  setup,
-	Reduce: reduce,
+	Name:       "GOL",
+	Initialize: initialize,
+	Setup:      setup,
+	Reduce:     reduce,
 }
 
 // Setup the game of life task
@@ -83,4 +84,21 @@ func generateRandomBoard(n int) []int8 {
 		}
 	}
 	return board
+}
+
+// GenerateSetupIntent creates a new setup intent for this type of task
+func initialize(UUID string, config tasks.TaskConfig, input map[string]interface{}) *tasks.Intent {
+	board := generateRandomBoard(int(input["size"].(float64)))
+	newIntent := tasks.Intent{
+		IntentType: "setup",
+		TaskType:   "GOL",
+		TaskUUID:   UUID,
+		Config:     config,
+		Input: map[string]interface{}{
+			"size":  input["size"],
+			"board": board,
+		},
+	}
+
+	return &newIntent
 }

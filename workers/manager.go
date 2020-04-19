@@ -42,7 +42,7 @@ var wmSingleton = WorkerManager{
 	Workers:          make(map[string]Worker),
 	AvailableWorkers: make(chan Worker, 1024),
 	AllocatedWorkers: make(map[string][]Worker),
-	MapTaskQueue:     make(chan *tasks.Intent),
+	MapTaskQueue:     make(chan *tasks.Intent, 1024), // TODO figure out optimal buffering length
 	workersMutex:     sync.RWMutex{},
 	allocationMutex:  sync.RWMutex{},
 }

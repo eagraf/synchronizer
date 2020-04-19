@@ -16,8 +16,22 @@ type TaskScheduler struct {
 	logger       *log.Logger
 }
 
+var taskScheduler *TaskScheduler
+
+// GetTaskSchedulerSingleton gets the task scheduler
+func GetTaskSchedulerSingleton() *TaskScheduler {
+	if taskScheduler == nil {
+		panic("TaskScheduler has not been initialized")
+	}
+	return taskScheduler
+}
+
 // Start listening for intents originated by the API/scheduler
 func Start(taskRegistry map[string]TaskType, mapTaskQueue chan *Intent) *TaskScheduler {
+
+	if taskScheduler != nil {
+		panic("TaskScheduler has been initialized already")
+	}
 
 	// Create TaskScheduler
 	var ts = TaskScheduler{
@@ -50,6 +64,8 @@ func Start(taskRegistry map[string]TaskType, mapTaskQueue chan *Intent) *TaskSch
 		}
 	}()
 
+	// Set singleton and return
+	taskScheduler = &ts
 	return &ts
 }
 

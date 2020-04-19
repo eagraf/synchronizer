@@ -25,7 +25,8 @@ type TaskInstance struct {
 
 // TaskType holds the setup and reduce functions for a type of task
 type TaskType struct {
-	Name   string
-	Setup  func(i *Intent) (*TaskInstance, []*Intent)
-	Reduce func() *Intent
+	Name       string
+	Initialize func(UUID string, config TaskConfig, input map[string]interface{}) *Intent
+	Setup      func(i *Intent) (*TaskInstance, []*Intent)
+	Reduce     func() *Intent
 }

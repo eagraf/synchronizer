@@ -31,7 +31,7 @@ func main() {
 	var taskRegistry map[string]tasks.TaskType = make(map[string]tasks.TaskType, 0)
 	taskRegistry["GOL"] = gameoflife.GOLTaskType
 
-	newIntent := tasks.Intent{
+	/*newIntent := tasks.Intent{
 		IntentType: "setup",
 		TaskType:   "GOL",
 		TaskUUID:   "Hello",
@@ -51,15 +51,15 @@ func main() {
 				0, 0, 0, 0, 0, 0, 0, 0,
 			},
 		},
-	}
+	}*/
 
 	messenger.InitializeMessenger()
 
 	wm := workers.GetWorkerManager()
 	wm.Start()
 
-	ts := tasks.Start(taskRegistry, wm.MapTaskQueue)
-	ts.IntentQueue <- &newIntent
+	_ = tasks.Start(taskRegistry, wm.MapTaskQueue)
+	//ts.IntentQueue <- &newIntent
 
 	r := RegisterRoutes()
 	log.Fatal(http.ListenAndServe(":2216", r))
