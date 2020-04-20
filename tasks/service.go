@@ -9,6 +9,8 @@ import (
 	"github.com/google/uuid"
 )
 
+var taskService *TaskService
+
 // TaskService handles API calls related to tasks
 type TaskService struct {
 	TaskRegistry map[string]TaskType
@@ -16,14 +18,26 @@ type TaskService struct {
 	MapTaskQueue chan *Intent
 }
 
-// GetTaskService returns an instance of the TaskService
-func GetTaskService(taskRegistry map[string]TaskType, mapTaskQueue chan *Intent) *TaskService {
+// InitializeTaskService initializes the TaskService singleton
+func InitializeTaskService(taskRegistry map[string]TaskType, mapTaskQueue chan *Intent) *TaskService {
+	if taskService != nil {
+		panic("TaskService has already been initialized")
+	}
 	ts := TaskService{
 		CurrentTasks: make(map[string]TaskInstance),
 		TaskRegistry: taskRegistry,
 		MapTaskQueue: mapTaskQueue,
 	}
-	return &ts
+	taskService = &ts
+	return taskService
+}
+
+// GetTaskServiceSingleton returns the TaskService singleton
+func GetTaskServiceSingleton(taskRegistry map[string]TaskType, mapTaskQueue chan *Intent) *TaskService {
+	if taskService == nil {
+		panic("TaskService has not been initialized yet")
+	}
+	return taskService
 }
 
 // GetTasks gets all ongoing tasks
@@ -86,3 +100,7 @@ func (ts *TaskService) PostTask(w http.ResponseWriter, r *http.Request) {
 	// Write uuid as response
 	w.Write([]byte(uuid))
 }
+
+/*func (ts *TaskService) GetTask(uuid string) (*TaskInstance, ok) {
+	return ts.CurrentTasks[uuid]
+}*/

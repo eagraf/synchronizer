@@ -16,7 +16,7 @@ func RegisterRoutes() http.Handler {
 	taskRegistry["GOL"] = gameoflife.GOLTaskType
 
 	workerService := workers.GetWorkerService()
-	taskService := tasks.GetTaskService(taskRegistry, workers.GetWorkerManager().MapTaskQueue)
+	taskService := tasks.InitializeTaskService(taskRegistry, workers.GetWorkerManager().MapTaskQueue)
 
 	r := chi.NewRouter()
 	r.Route("/health", func(r chi.Router) {
