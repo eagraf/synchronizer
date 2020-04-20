@@ -18,15 +18,21 @@ type TaskService struct {
 	MapTaskQueue chan *Intent
 }
 
+<<<<<<< HEAD
 // InitializeTaskService initializes the TaskService singleton
 func InitializeTaskService(taskRegistry map[string]TaskType, mapTaskQueue chan *Intent) *TaskService {
 	if taskService != nil {
 		panic("TaskService has already been initialized")
 	}
+=======
+// GetTaskService returns an instance of the TaskService
+func GetTaskService(taskRegistry map[string]TaskType, mapTaskQueue chan *Intent) *TaskService {
+>>>>>>> d6da4957015293b64a01a5df53f72a1b7e4859b6
 	ts := TaskService{
 		CurrentTasks: make(map[string]TaskInstance),
 		TaskRegistry: taskRegistry,
 		MapTaskQueue: mapTaskQueue,
+<<<<<<< HEAD
 	}
 	taskService = &ts
 	return taskService
@@ -36,6 +42,8 @@ func InitializeTaskService(taskRegistry map[string]TaskType, mapTaskQueue chan *
 func GetTaskServiceSingleton(taskRegistry map[string]TaskType, mapTaskQueue chan *Intent) *TaskService {
 	if taskService == nil {
 		panic("TaskService has not been initialized yet")
+=======
+>>>>>>> d6da4957015293b64a01a5df53f72a1b7e4859b6
 	}
 	return taskService
 }
