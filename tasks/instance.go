@@ -72,3 +72,9 @@ func (ti *TaskInstance) handleSetup(intent *Intent) {
 		ti.intentQueue <- mi
 	}
 }
+
+// OnReceive implements a messenger subscriber
+func (ti *TaskInstance) OnReceive(m *map[string]interface{}) {
+	fmt.Println("OnReceive", m)
+
+}

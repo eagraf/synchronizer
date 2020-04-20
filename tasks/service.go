@@ -18,32 +18,24 @@ type TaskService struct {
 	MapTaskQueue chan *Intent
 }
 
-<<<<<<< HEAD
 // InitializeTaskService initializes the TaskService singleton
 func InitializeTaskService(taskRegistry map[string]TaskType, mapTaskQueue chan *Intent) *TaskService {
 	if taskService != nil {
 		panic("TaskService has already been initialized")
 	}
-=======
-// GetTaskService returns an instance of the TaskService
-func GetTaskService(taskRegistry map[string]TaskType, mapTaskQueue chan *Intent) *TaskService {
->>>>>>> d6da4957015293b64a01a5df53f72a1b7e4859b6
 	ts := TaskService{
 		CurrentTasks: make(map[string]TaskInstance),
 		TaskRegistry: taskRegistry,
 		MapTaskQueue: mapTaskQueue,
-<<<<<<< HEAD
 	}
 	taskService = &ts
 	return taskService
 }
 
 // GetTaskServiceSingleton returns the TaskService singleton
-func GetTaskServiceSingleton(taskRegistry map[string]TaskType, mapTaskQueue chan *Intent) *TaskService {
+func GetTaskServiceSingleton() *TaskService {
 	if taskService == nil {
 		panic("TaskService has not been initialized yet")
-=======
->>>>>>> d6da4957015293b64a01a5df53f72a1b7e4859b6
 	}
 	return taskService
 }
@@ -109,6 +101,9 @@ func (ts *TaskService) PostTask(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(uuid))
 }
 
-/*func (ts *TaskService) GetTask(uuid string) (*TaskInstance, ok) {
-	return ts.CurrentTasks[uuid]
-}*/
+// GetTaskInstance returns a current task instance
+// TODO this probably should be refactored into a model type
+func (ts *TaskService) GetTaskInstance(uuid string) (*TaskInstance, bool) {
+	val, ok := ts.CurrentTasks[uuid]
+	return &val, ok
+}

@@ -57,12 +57,12 @@ func (m *Messenger) RemoveConnection(workerUUID string) {
 }
 
 // AddSubscriber subscribes any subscriber interface to a topic
-func (m *Messenger) AddSubscriber(subscriber *Subscriber, topics []string) {
+func (m *Messenger) AddSubscriber(subscriber Subscriber, topics []string) {
 	for _, topic := range topics {
 		if _, ok := m.subscriptions[topic]; ok == false {
 			m.subscriptions[topic] = make([]*Subscriber, 0)
 		}
-		m.subscriptions[topic] = append(m.subscriptions[topic], subscriber)
+		m.subscriptions[topic] = append(m.subscriptions[topic], &subscriber)
 	}
 }
 
@@ -103,17 +103,17 @@ func (m *Messenger) listen(workerUUID string, connection *websocket.Conn) {
 		}
 
 		// Unmarshal the message
-		var message interface{}
+		var message map[string]interface{}
 		err = json.Unmarshal(buffer, &message)
 		if err != nil {
 			fmt.Println(err)
 		}
 		fmt.Println(buffer)
 		fmt.Println(message)
-		/*
-			// Use workerUUID as a topic for now
-			for _, subscriber := range m.subscriptions[workerUUID] {
-				(*subscriber).OnReceive(message)
-			}*/
+
+		// Use workerUUID as a topic for now
+		for _, subscriber := range m.subscriptions[workerUUID] {
+			(*subscriber).OnReceive(&message)
+		}
 	}
 }

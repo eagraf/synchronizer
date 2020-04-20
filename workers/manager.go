@@ -116,8 +116,12 @@ func (wm *WorkerManager) Start() {
 				fmt.Printf("Allocating worker %v to task %v (intent listener)\n", worker.UUID, mapIntent.TaskUUID)
 				// Release write mutex
 				wm.allocationMutex.Unlock()
-				//go wm.MessageWorker(worker.UUID, mapIntent.TaskUUID, mapIntent)
-				messenger.GetMessengerSingleton().SendMessage(worker.UUID, mapIntent)
+				// Send message to worker and add subscription
+				m := messenger.GetMessengerSingleton()
+				ti, _ := tasks.GetTaskServiceSingleton().GetTaskInstance(mapIntent.TaskUUID)
+				// TODO error handling
+				m.AddSubscriber(ti, []string{worker.UUID})
+				m.SendMessage(worker.UUID, mapIntent)
 
 			case worker := <-wm.AvailableWorkers:
 				fmt.Println("Received worker")
@@ -129,8 +133,12 @@ func (wm *WorkerManager) Start() {
 				// Release write mutex
 				wm.allocationMutex.Unlock()
 
-				//go wm.MessageWorker(worker.UUID, mapIntent.TaskUUID, mapIntent)
-				messenger.GetMessengerSingleton().SendMessage(worker.UUID, mapIntent)
+				// Send message to worker and add subscription
+				m := messenger.GetMessengerSingleton()
+				ti, _ := tasks.GetTaskServiceSingleton().GetTaskInstance(mapIntent.TaskUUID)
+				// TODO error handling
+				m.AddSubscriber(ti, []string{worker.UUID})
+				m.SendMessage(worker.UUID, mapIntent)
 			}
 		}
 	}()
