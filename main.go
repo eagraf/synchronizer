@@ -23,7 +23,7 @@ func main() {
 	wm := workers.GetWorkerManager()
 	wm.Start()
 
-	_ = tasks.Start(taskRegistry, wm.MapTaskQueue)
+	//	_ = tasks.Start(taskRegistry, wm.MapTaskQueue)
 
 	r := RegisterRoutes()
 	log.Fatal(http.ListenAndServe(":2216", r))

@@ -11,21 +11,26 @@ import (
 
 // TaskService handles API calls related to tasks
 type TaskService struct {
-	taskScheduler *TaskScheduler
+	TaskRegistry map[string]TaskType
+	CurrentTasks map[string]TaskInstance // Map of currently running tasks
+	MapTaskQueue chan *Intent
 }
 
 // GetTaskService returns an instance of the TaskService
-func GetTaskService() *TaskService {
+func GetTaskService(taskRegistry map[string]TaskType, mapTaskQueue chan *Intent) *TaskService {
 	ts := TaskService{
-		taskScheduler: GetTaskSchedulerSingleton(),
+		CurrentTasks: make(map[string]TaskInstance),
+		TaskRegistry: taskRegistry,
+		MapTaskQueue: mapTaskQueue,
 	}
 	return &ts
 }
 
 // GetTasks gets all ongoing tasks
 func (ts *TaskService) GetTasks(w http.ResponseWriter, r *http.Request) {
-	buffer, err := json.Marshal(ts.taskScheduler.CurrentTasks)
+	buffer, err := json.Marshal(ts.CurrentTasks)
 	if err != nil {
+		fmt.Println(err)
 		http.Error(w, "Failed to marshal tasks", 500)
 		return
 	}
@@ -61,17 +66,23 @@ func (ts *TaskService) PostTask(w http.ResponseWriter, r *http.Request) {
 	// Generate uuid
 	uuid := uuid.New().String()
 
-	var intent *Intent
-	// Generate the initial setup intent
-	switch body.TaskType {
-	case "GOL":
-		intent = ts.taskScheduler.TaskRegistry["GOL"].Initialize(uuid, TaskConfig{body.NumWorkers}, body.Input)
-	default:
-		http.Error(w, "Task type not recognized", 400)
-		return
+	// Create new task instance
+	ti := TaskInstance{
+		UUID:              uuid,
+		TaskType:          body.TaskType,
+		TaskSpecification: ts.TaskRegistry[body.TaskType], // TaskRegistry
+		Config: TaskConfig{
+			body.NumWorkers,
+		},
+		intentQueue:    make(chan *Intent),
+		PartialResults: make([]interface{}, 0),
+		RequestTimes:   make([]RequestTime, 0),
 	}
 
-	// Enqueue with the task scheduler
-	taskScheduler.IntentQueue <- intent
+	// Start the task
+	ti.Start(ts.MapTaskQueue, &body.Input)
+	ts.CurrentTasks[uuid] = ti
+
+	// Write uuid as response
 	w.Write([]byte(uuid))
 }

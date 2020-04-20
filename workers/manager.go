@@ -1,7 +1,6 @@
 package workers
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -135,23 +134,4 @@ func (wm *WorkerManager) Start() {
 			}
 		}
 	}()
-}
-
-// MessageWorker sends a map intent to a worker
-// TODO determine if WriteCloser can be fixed to work with gobs => could prevent one buffer copy
-func (wm *WorkerManager) MessageWorker(workerUUID, taskUUID string, mapIntent *tasks.Intent) error {
-	// Decompose the map intent into a JSON like map
-	buffer, err := json.Marshal(mapIntent)
-	if err != nil {
-		fmt.Println(err.Error())
-		return err
-	}
-
-	// Send the intent to the worker
-	err = wm.Workers[workerUUID].connection.WriteMessage(websocket.TextMessage, buffer)
-	if err != nil {
-		fmt.Println(err.Error())
-		return err
-	}
-	return nil
 }

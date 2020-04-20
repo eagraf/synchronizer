@@ -15,14 +15,6 @@ type Intent struct {
 	Input      interface{}
 }
 
-// TaskInstance models an ongoing task
-type TaskInstance struct {
-	UUID           string
-	Config         TaskConfig
-	PartialResults []interface{}
-	State          interface{}
-}
-
 // TaskType holds the setup and reduce functions for a type of task
 type TaskType struct {
 	Name       string
