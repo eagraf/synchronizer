@@ -2,7 +2,6 @@ package tasks
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -21,15 +20,15 @@ type TaskInstance struct {
 
 type RequestTime struct {
 	workerUUID    string
-	start         time.Time
-	end           time.Time
+	start         int64
+	end           int64
 	intermediates []IntermediateTime
 }
 
 type IntermediateTime struct {
 	name  string
-	start time.Time
-	end   time.Time
+	start int64
+	end   int64
 }
 
 // Start new instance of a task
@@ -43,6 +42,7 @@ func (ti *TaskInstance) Start(mapTaskQueue chan *Intent, input *map[string]inter
 				go ti.handleSetup(intent)
 			case "map":
 				fmt.Println("Map")
+				// Find a better place to put this
 				mapTaskQueue <- intent
 				// Handle map task
 			case "reduce":
@@ -73,8 +73,12 @@ func (ti *TaskInstance) handleSetup(intent *Intent) {
 	}
 }
 
-// OnReceive implements a messenger subscriber
-func (ti *TaskInstance) OnReceive(m *map[string]interface{}) {
-	fmt.Println("OnReceive", m)
+// GetUUID implements a messenger subscriber method
+func (ti *TaskInstance) GetUUID() string {
+	return ti.UUID
+}
 
+// OnReceive implements a messenger subscriber method
+func (ti *TaskInstance) OnReceive(topic string, m *map[string]interface{}) {
+	fmt.Println("OnReceive", m)
 }

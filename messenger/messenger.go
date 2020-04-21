@@ -4,13 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
 
 type Messenger struct {
-	connections   map[string]*websocket.Conn
-	subscriptions map[string][]*Subscriber
+	connections    map[string]*Connection
+	subscriptions  map[string]map[string]*Subscriber
+	activeRequests map[string]Request
 }
 
 type Message struct {
@@ -18,8 +21,19 @@ type Message struct {
 	Payload     interface{}
 }
 
+type Connection struct {
+	connection *websocket.Conn
+	mutex      sync.Mutex
+}
+
 type Subscriber interface {
-	OnReceive(m *map[string]interface{})
+	GetUUID() string
+	OnReceive(topic string, m *map[string]interface{})
+}
+
+type Request struct {
+	start int64
+	end   int64
 }
 
 var messenger *Messenger
@@ -30,8 +44,9 @@ func InitializeMessenger() *Messenger {
 		panic("Messenger already initialized")
 	}
 	m := Messenger{
-		connections:   make(map[string]*websocket.Conn),
-		subscriptions: make(map[string][]*Subscriber),
+		connections:    make(map[string]*Connection),
+		subscriptions:  make(map[string]map[string]*Subscriber), // Each topic is a set of subscribers
+		activeRequests: make(map[string]Request),
 	}
 	messenger = &m
 	return messenger
@@ -47,8 +62,12 @@ func GetMessengerSingleton() *Messenger {
 
 // AddConnection registers a connection with the messenger and begins listening on a new thread
 func (m *Messenger) AddConnection(workerUUID string, connection *websocket.Conn) {
-	m.connections[workerUUID] = connection
-	go m.listen(workerUUID, connection)
+	c := Connection{
+		connection,
+		sync.Mutex{},
+	}
+	m.connections[workerUUID] = &c
+	go m.listen(workerUUID, &c)
 }
 
 // RemoveConnection stops listening on a connection
@@ -59,10 +78,16 @@ func (m *Messenger) RemoveConnection(workerUUID string) {
 // AddSubscriber subscribes any subscriber interface to a topic
 func (m *Messenger) AddSubscriber(subscriber Subscriber, topics []string) {
 	for _, topic := range topics {
+		// Check if topic exists
 		if _, ok := m.subscriptions[topic]; ok == false {
-			m.subscriptions[topic] = make([]*Subscriber, 0)
+			// If not make topic
+			m.subscriptions[topic] = make(map[string]*Subscriber)
+		} else {
+			// Check if already subscribed
+			if _, ok := m.subscriptions[topic][subscriber.GetUUID()]; ok == false {
+				m.subscriptions[topic][subscriber.GetUUID()] = &subscriber
+			}
 		}
-		m.subscriptions[topic] = append(m.subscriptions[topic], &subscriber)
 	}
 }
 
@@ -70,11 +95,13 @@ func (m *Messenger) AddSubscriber(subscriber Subscriber, topics []string) {
 
 // SendMessage sends a message to a worker in a separate thread
 // TODO add some sort of error handling
+// TODO account for concurrent write to websocket connection error
 func (m *Messenger) SendMessage(workerUUID string, payload interface{}) {
 	go func() {
+		messageType := reflect.TypeOf(payload).Elem().Name()
 		// Construct the message
 		message := Message{
-			MessageType: reflect.TypeOf(payload).Elem().Name(),
+			MessageType: messageType,
 			Payload:     payload,
 		}
 		// Encode message as json
@@ -82,19 +109,30 @@ func (m *Messenger) SendMessage(workerUUID string, payload interface{}) {
 		if err != nil {
 			fmt.Println(err.Error())
 		}
+
+		// Add to request queue
+		if messageType == "Intent" {
+			r := Request{
+				start: time.Now().UnixNano() / int64(time.Millisecond),
+			}
+			m.activeRequests[workerUUID] = r
+		}
+
 		// Send the message over websocket
-		err = m.connections[workerUUID].WriteMessage(websocket.TextMessage, buffer)
+		m.connections[workerUUID].mutex.Lock()
+		err = m.connections[workerUUID].connection.WriteMessage(websocket.TextMessage, buffer)
 		if err != nil {
 			fmt.Println(err.Error())
 		}
+		m.connections[workerUUID].mutex.Unlock()
 	}()
 }
 
 // Listening thread for
-func (m *Messenger) listen(workerUUID string, connection *websocket.Conn) {
+func (m *Messenger) listen(workerUUID string, c *Connection) {
 	for {
 		// Read incoming message
-		_, buffer, err := connection.ReadMessage()
+		_, buffer, err := c.connection.ReadMessage()
 		// TODO check if error involves channel being closed
 		if err != nil {
 			fmt.Println(err)
@@ -108,12 +146,16 @@ func (m *Messenger) listen(workerUUID string, connection *websocket.Conn) {
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Println(buffer)
-		fmt.Println(message)
 
+		if s, ok := m.activeRequests[workerUUID]; ok != false {
+			s.end = time.Now().UnixNano() / int64(time.Millisecond)
+			fmt.Println(s)
+		}
+		// Why does everything suck
+		delete(m.activeRequests, workerUUID)
 		// Use workerUUID as a topic for now
 		for _, subscriber := range m.subscriptions[workerUUID] {
-			(*subscriber).OnReceive(&message)
+			(*subscriber).OnReceive(workerUUID, &message)
 		}
 	}
 }

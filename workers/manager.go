@@ -40,7 +40,7 @@ type RegistrationResponse struct {
 var wmSingleton = WorkerManager{
 	Workers:          make(map[string]Worker),
 	AvailableWorkers: make(chan Worker, 1024),
-	AllocatedWorkers: make(map[string][]Worker),
+	AllocatedWorkers: make(map[string][]Worker),      // TODO actually use allocations rather than relying on availability queue
 	MapTaskQueue:     make(chan *tasks.Intent, 1024), // TODO figure out optimal buffering length
 	workersMutex:     sync.RWMutex{},
 	allocationMutex:  sync.RWMutex{},
@@ -110,36 +110,54 @@ func (wm *WorkerManager) Start() {
 			case mapIntent := <-wm.MapTaskQueue:
 				fmt.Println("Received map intent")
 				// Get write mutex
-				wm.allocationMutex.Lock()
+				//wm.allocationMutex.Lock()
 				worker := <-wm.AvailableWorkers
 				// TODO need to check if worker is still available
 				fmt.Printf("Allocating worker %v to task %v (intent listener)\n", worker.UUID, mapIntent.TaskUUID)
 				// Release write mutex
-				wm.allocationMutex.Unlock()
+				//wm.allocationMutex.Unlock()
 				// Send message to worker and add subscription
 				m := messenger.GetMessengerSingleton()
 				ti, _ := tasks.GetTaskServiceSingleton().GetTaskInstance(mapIntent.TaskUUID)
 				// TODO error handling
+				// TODO better handling of subscribers
 				m.AddSubscriber(ti, []string{worker.UUID})
+				m.AddSubscriber(wm, []string{worker.UUID})
 				m.SendMessage(worker.UUID, mapIntent)
 
 			case worker := <-wm.AvailableWorkers:
 				fmt.Println("Received worker")
 				// Get write mutex
-				wm.allocationMutex.Lock()
+				//wm.allocationMutex.Lock()
 				mapIntent := <-wm.MapTaskQueue
 				// TODO need to check if worker is still available
 				fmt.Printf("Allocating worker %v to task %v (worker listener)\n", worker.UUID, mapIntent.TaskUUID)
 				// Release write mutex
-				wm.allocationMutex.Unlock()
+				//wm.allocationMutex.Unlock()
 
 				// Send message to worker and add subscription
 				m := messenger.GetMessengerSingleton()
 				ti, _ := tasks.GetTaskServiceSingleton().GetTaskInstance(mapIntent.TaskUUID)
 				// TODO error handling
 				m.AddSubscriber(ti, []string{worker.UUID})
+				m.AddSubscriber(wm, []string{worker.UUID})
 				m.SendMessage(worker.UUID, mapIntent)
 			}
 		}
 	}()
+}
+
+// GetUUID implements a messenger subscriber method
+func (wm *WorkerManager) GetUUID() string {
+	return "WorkerManager" // Probably should define this as a constant somewhere
+}
+
+// OnReceive implements a messenger subscriber method
+func (wm *WorkerManager) OnReceive(topic string, m *map[string]interface{}) {
+	// TODO rn assuming topic is worker UUID
+	// TODO evaluate if mutex is necessary here
+	worker := wm.Workers[topic]
+	wm.allocationMutex.Lock()
+	wm.AvailableWorkers <- worker
+	wm.allocationMutex.Unlock()
 }
