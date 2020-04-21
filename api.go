@@ -24,8 +24,9 @@ func RegisterRoutes() http.Handler {
 	})
 	r.Route("/workers", func(r chi.Router) {
 		//r.Post("/", workerService.PostWorker)
-		r.Get("/", workerService.RegisterWorker)
+		r.Get("/", workerService.GetWorkers)
 		r.Delete("/{uuid}/", workerService.DeleteWorker)
+		r.Get("/register/", workerService.RegisterWorker) // TODO probably should be named better
 	})
 	r.Route("/tasks", func(r chi.Router) {
 		r.Post("/", taskService.PostTask)

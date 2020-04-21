@@ -18,7 +18,7 @@ import (
 type Worker struct {
 	UUID       string
 	workerType string
-	connection *websocket.Conn
+	connection *websocket.Conn `json:"-"`
 }
 
 // WorkerManager keeps a table of all active wrokers
