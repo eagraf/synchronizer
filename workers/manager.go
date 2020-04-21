@@ -147,6 +147,11 @@ func (wm *WorkerManager) Start() {
 	}()
 }
 
+// AddSubscription implements a messenger subscriber method
+func (wm *WorkerManager) AddSubscription(topic string) {
+	// Do nothing for now
+}
+
 // GetUUID implements a messenger subscriber method
 func (wm *WorkerManager) GetUUID() string {
 	return "WorkerManager" // Probably should define this as a constant somewhere

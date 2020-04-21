@@ -27,6 +27,7 @@ type Connection struct {
 }
 
 type Subscriber interface {
+	AddSubscription(topic string)
 	GetUUID() string
 	OnReceive(topic string, m *map[string]interface{})
 }
@@ -78,6 +79,7 @@ func (m *Messenger) RemoveConnection(workerUUID string) {
 // AddSubscriber subscribes any subscriber interface to a topic
 func (m *Messenger) AddSubscriber(subscriber Subscriber, topics []string) {
 	for _, topic := range topics {
+		fmt.Println(m.subscriptions[topic])
 		// Check if topic exists
 		if _, ok := m.subscriptions[topic]; ok == false {
 			// If not make topic
@@ -86,12 +88,18 @@ func (m *Messenger) AddSubscriber(subscriber Subscriber, topics []string) {
 			// Check if already subscribed
 			if _, ok := m.subscriptions[topic][subscriber.GetUUID()]; ok == false {
 				m.subscriptions[topic][subscriber.GetUUID()] = &subscriber
+				subscriber.AddSubscription(topic)
 			}
 		}
 	}
 }
 
-// TODO RemoveSubscriber
+// RemoveSubscriber unsubscribes a listener
+func (m *Messenger) RemoveSubscriber(subscriber Subscriber, topic string) {
+	if _, ok := m.subscriptions[topic][subscriber.GetUUID()]; ok == true {
+		delete(m.subscriptions[topic], subscriber.GetUUID())
+	}
+}
 
 // SendMessage sends a message to a worker in a separate thread
 // TODO add some sort of error handling

@@ -3,6 +3,7 @@ package tasks
 import (
 	"fmt"
 
+	"github.com/eagraf/synchronizer/messenger"
 	"github.com/google/uuid"
 )
 
@@ -16,6 +17,7 @@ type TaskInstance struct {
 	PartialResults    []interface{}
 	State             interface{}
 	RequestTimes      []RequestTime
+	subscriptions     []string
 }
 
 type RequestTime struct {
@@ -60,6 +62,7 @@ func (ti *TaskInstance) Start(mapTaskQueue chan *Intent, input *map[string]inter
 
 // Handle a setup intent
 func (ti *TaskInstance) handleSetup(intent *Intent) {
+	ti.subscriptions = make([]string, 0)
 
 	// Execute setup procedure for task
 	taskInstance, mapIntents := ti.TaskSpecification.Setup(intent)
@@ -73,6 +76,11 @@ func (ti *TaskInstance) handleSetup(intent *Intent) {
 	}
 }
 
+// AddSubscription implements a messenger subscriber method
+func (ti *TaskInstance) AddSubscription(topic string) {
+	ti.subscriptions = append(ti.subscriptions, topic)
+}
+
 // GetUUID implements a messenger subscriber method
 func (ti *TaskInstance) GetUUID() string {
 	return ti.UUID
@@ -81,4 +89,18 @@ func (ti *TaskInstance) GetUUID() string {
 // OnReceive implements a messenger subscriber method
 func (ti *TaskInstance) OnReceive(topic string, m *map[string]interface{}) {
 	fmt.Println("OnReceive", (*m)["start"], (*m)["end"])
+
+	ti.PartialResults = append(ti.PartialResults, m)
+	// TODO this is super hacky dont do this
+	//ti.PartialResults[topic+"/"+len(ti.PartialResults)] = m
+
+	if len(ti.PartialResults) == ti.Config.NumWorkers {
+		// Stop listening to all subscriptions
+		for _, s := range ti.subscriptions {
+			messenger.GetMessengerSingleton().RemoveSubscriber(ti, s)
+		}
+
+		// Trigger reduce intent
+	}
+
 }
