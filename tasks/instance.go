@@ -17,7 +17,7 @@ type TaskInstance struct {
 	PartialResults    []interface{}
 	State             interface{}
 	RequestTimes      []RequestTime
-	subscriptions     []string
+	subscriptions     map[string]bool
 }
 
 type RequestTime struct {
@@ -62,7 +62,7 @@ func (ti *TaskInstance) Start(mapTaskQueue chan *Intent, input *map[string]inter
 
 // Handle a setup intent
 func (ti *TaskInstance) handleSetup(intent *Intent) {
-	ti.subscriptions = make([]string, 0)
+	ti.subscriptions = make(map[string]bool)
 
 	// Execute setup procedure for task
 	taskInstance, mapIntents := ti.TaskSpecification.Setup(intent)
@@ -78,7 +78,7 @@ func (ti *TaskInstance) handleSetup(intent *Intent) {
 
 // AddSubscription implements a messenger subscriber method
 func (ti *TaskInstance) AddSubscription(topic string) {
-	ti.subscriptions = append(ti.subscriptions, topic)
+	ti.subscriptions[topic] = true
 }
 
 // GetUUID implements a messenger subscriber method
@@ -96,11 +96,18 @@ func (ti *TaskInstance) OnReceive(topic string, m *map[string]interface{}) {
 
 	if len(ti.PartialResults) == ti.Config.NumWorkers {
 		// Stop listening to all subscriptions
-		for _, s := range ti.subscriptions {
+		for s := range ti.subscriptions {
 			messenger.GetMessengerSingleton().RemoveSubscriber(ti, s)
 		}
 
 		// Trigger reduce intent
 	}
+}
 
+// OnClose implements a messenger subscriber method
+// TODO might want to unify this with messenger.RemoveSubscriber
+func (ti *TaskInstance) OnClose(topic string) {
+	delete(ti.subscriptions, topic)
+
+	// TODO how does the task handle this?
 }

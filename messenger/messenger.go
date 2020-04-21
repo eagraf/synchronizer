@@ -30,6 +30,7 @@ type Subscriber interface {
 	AddSubscription(topic string)
 	GetUUID() string
 	OnReceive(topic string, m *map[string]interface{})
+	OnClose(string)
 }
 
 type Request struct {
@@ -73,13 +74,24 @@ func (m *Messenger) AddConnection(workerUUID string, connection *websocket.Conn)
 
 // RemoveConnection stops listening on a connection
 func (m *Messenger) RemoveConnection(workerUUID string) {
+
+	// Delete connection
 	delete(m.connections, workerUUID)
+
+	// Notify any listeners
+	if _, ok := m.subscriptions[workerUUID]; ok == true {
+		for _, subscriber := range m.subscriptions[workerUUID] {
+			(*subscriber).OnClose(workerUUID)
+		}
+	}
+
+	// Delete topic
+	delete(m.subscriptions, workerUUID)
 }
 
 // AddSubscriber subscribes any subscriber interface to a topic
 func (m *Messenger) AddSubscriber(subscriber Subscriber, topics []string) {
 	for _, topic := range topics {
-		fmt.Println(m.subscriptions[topic])
 		// Check if topic exists
 		if _, ok := m.subscriptions[topic]; ok == false {
 			// If not make topic
@@ -143,7 +155,7 @@ func (m *Messenger) listen(workerUUID string, c *Connection) {
 		_, buffer, err := c.connection.ReadMessage()
 		// TODO check if error involves channel being closed
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("Removing connection:" + err.Error())
 			m.RemoveConnection(workerUUID)
 			return
 		}
