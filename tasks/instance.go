@@ -80,5 +80,5 @@ func (ti *TaskInstance) GetUUID() string {
 
 // OnReceive implements a messenger subscriber method
 func (ti *TaskInstance) OnReceive(topic string, m *map[string]interface{}) {
-	fmt.Println("OnReceive", m.start, m.end)
+	fmt.Println("OnReceive", (*m)["start"], (*m)["end"])
 }

@@ -110,12 +110,12 @@ func (wm *WorkerManager) Start() {
 			case mapIntent := <-wm.MapTaskQueue:
 				fmt.Println("Received map intent")
 				// Get write mutex
-				//wm.allocationMutex.Lock()
+				wm.allocationMutex.Lock()
 				worker := <-wm.AvailableWorkers
 				// TODO need to check if worker is still available
 				fmt.Printf("Allocating worker %v to task %v (intent listener)\n", worker.UUID, mapIntent.TaskUUID)
 				// Release write mutex
-				//wm.allocationMutex.Unlock()
+				wm.allocationMutex.Unlock()
 				// Send message to worker and add subscription
 				m := messenger.GetMessengerSingleton()
 				ti, _ := tasks.GetTaskServiceSingleton().GetTaskInstance(mapIntent.TaskUUID)
@@ -128,12 +128,12 @@ func (wm *WorkerManager) Start() {
 			case worker := <-wm.AvailableWorkers:
 				fmt.Println("Received worker")
 				// Get write mutex
-				//wm.allocationMutex.Lock()
+				wm.allocationMutex.Lock()
 				mapIntent := <-wm.MapTaskQueue
 				// TODO need to check if worker is still available
 				fmt.Printf("Allocating worker %v to task %v (worker listener)\n", worker.UUID, mapIntent.TaskUUID)
 				// Release write mutex
-				//wm.allocationMutex.Unlock()
+				wm.allocationMutex.Unlock()
 
 				// Send message to worker and add subscription
 				m := messenger.GetMessengerSingleton()
