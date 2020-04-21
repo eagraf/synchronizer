@@ -35,6 +35,8 @@ type IntermediateTime struct {
 
 // Start new instance of a task
 func (ti *TaskInstance) Start(mapTaskQueue chan *Intent, input *map[string]interface{}) {
+	// TODO find a better place to initalize this
+	ti.subscriptions = make(map[string]bool)
 	go func() {
 		for {
 			intent := <-ti.intentQueue
@@ -62,7 +64,6 @@ func (ti *TaskInstance) Start(mapTaskQueue chan *Intent, input *map[string]inter
 
 // Handle a setup intent
 func (ti *TaskInstance) handleSetup(intent *Intent) {
-	ti.subscriptions = make(map[string]bool)
 
 	// Execute setup procedure for task
 	taskInstance, mapIntents := ti.TaskSpecification.Setup(intent)
