@@ -157,7 +157,9 @@ func (wm *WorkerManager) OnReceive(topic string, m *map[string]interface{}) {
 	// TODO rn assuming topic is worker UUID
 	// TODO evaluate if mutex is necessary here
 	worker := wm.Workers[topic]
-	wm.allocationMutex.Lock()
+	fmt.Println("hello")
+	//wm.allocationMutex.Lock()
+	fmt.Println("goodbye")
 	wm.AvailableWorkers <- worker
-	wm.allocationMutex.Unlock()
+	//wm.allocationMutex.Unlock()
 }

@@ -12,7 +12,7 @@ type Intent struct {
 	TaskType   string
 	TaskUUID   string
 	Config     TaskConfig
-	Input      interface{}
+	Input      map[string]interface{}
 }
 
 // TaskType holds the setup and reduce functions for a type of task

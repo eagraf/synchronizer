@@ -30,7 +30,7 @@ func setup(intent *tasks.Intent) (*tasks.TaskInstance, []*tasks.Intent) {
 	// Initialize partial results and intents
 	partialResults := make([]interface{}, intent.Config.NumWorkers)
 	mapIntents := make([]*tasks.Intent, intent.Config.NumWorkers)
-	board := generateRandomBoard(1024)
+	board := intent.Input["board"]
 	for i := range partialResults {
 		partialResults[i] = GOLPartialResult{
 			Data: "Hello",
@@ -41,7 +41,7 @@ func setup(intent *tasks.Intent) (*tasks.TaskInstance, []*tasks.Intent) {
 			TaskUUID:   intent.TaskUUID,
 			Config:     intent.Config,
 			Input: map[string]interface{}{
-				"size": 1024,
+				"size": intent.Input["size"],
 				/*"board": []int8{
 					0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0,
