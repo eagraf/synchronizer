@@ -135,6 +135,7 @@ func (m *Messenger) SendMessage(workerUUID string, payload interface{}) {
 		if messageType == "Intent" {
 			r := Request{
 				outerStart: time.Now().UnixNano() / int64(time.Millisecond),
+				outerEnd:   0,
 			}
 			m.activeRequests[workerUUID] = r
 		}
@@ -165,6 +166,7 @@ func (m *Messenger) listen(workerUUID string, c *Connection) {
 			m.RemoveConnection(workerUUID)
 			return
 		}
+		fmt.Println(buffer)
 
 		// Unmarshal the message
 		var message map[string]interface{}
@@ -179,9 +181,11 @@ func (m *Messenger) listen(workerUUID string, c *Connection) {
 			message["outer_start"] = s.outerStart
 			message["outer_end"] = s.outerEnd
 		}
+		fmt.Println(message, &message)
 		// Why does everything suck
 		delete(m.activeRequests, workerUUID)
 
+		fmt.Println(message, &message)
 		// Notify all subscribers
 		// Use workerUUID as a topic for now
 		for _, subscriber := range m.subscriptions[workerUUID] {
