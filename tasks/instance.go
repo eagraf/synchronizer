@@ -92,6 +92,7 @@ func (ti *TaskInstance) OnReceive(topic string, m *map[string]interface{}) {
 	fmt.Println("OnReceive", (*m)["start"], (*m)["end"])
 
 	ti.PartialResults = append(ti.PartialResults, m)
+	fmt.Println(ti.PartialResults)
 	// TODO this is super hacky dont do this
 	//ti.PartialResults[topic+"/"+len(ti.PartialResults)] = m
 

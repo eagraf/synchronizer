@@ -14,7 +14,7 @@ var taskService *TaskService
 // TaskService handles API calls related to tasks
 type TaskService struct {
 	TaskRegistry map[string]TaskType
-	CurrentTasks map[string]TaskInstance // Map of currently running tasks
+	CurrentTasks map[string]*TaskInstance // Map of currently running tasks
 	MapTaskQueue chan *Intent
 }
 
@@ -24,7 +24,7 @@ func InitializeTaskService(taskRegistry map[string]TaskType, mapTaskQueue chan *
 		panic("TaskService has already been initialized")
 	}
 	ts := TaskService{
-		CurrentTasks: make(map[string]TaskInstance),
+		CurrentTasks: make(map[string]*TaskInstance),
 		TaskRegistry: taskRegistry,
 		MapTaskQueue: mapTaskQueue,
 	}
@@ -42,6 +42,9 @@ func GetTaskServiceSingleton() *TaskService {
 
 // GetTasks gets all ongoing tasks
 func (ts *TaskService) GetTasks(w http.ResponseWriter, r *http.Request) {
+	for _, vak := range ts.CurrentTasks {
+		fmt.Println("hell", vak.PartialResults)
+	}
 	buffer, err := json.Marshal(ts.CurrentTasks)
 	if err != nil {
 		fmt.Println(err)
@@ -95,7 +98,7 @@ func (ts *TaskService) PostTask(w http.ResponseWriter, r *http.Request) {
 
 	// Start the task
 	ti.Start(ts.MapTaskQueue, &body.Input)
-	ts.CurrentTasks[uuid] = ti
+	ts.CurrentTasks[uuid] = &ti
 
 	// Write uuid as response
 	w.Write([]byte(uuid))
@@ -105,5 +108,5 @@ func (ts *TaskService) PostTask(w http.ResponseWriter, r *http.Request) {
 // TODO this probably should be refactored into a model type
 func (ts *TaskService) GetTaskInstance(uuid string) (*TaskInstance, bool) {
 	val, ok := ts.CurrentTasks[uuid]
-	return &val, ok
+	return val, ok
 }

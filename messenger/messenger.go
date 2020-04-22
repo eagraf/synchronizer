@@ -34,8 +34,10 @@ type Subscriber interface {
 }
 
 type Request struct {
-	start int64
-	end   int64
+	outerStart int64
+	outerEnd   int64
+	start      int64
+	end        int64
 }
 
 var messenger *Messenger
@@ -131,7 +133,7 @@ func (m *Messenger) SendMessage(workerUUID string, payload interface{}) {
 		// Add to request queue
 		if messageType == "Intent" {
 			r := Request{
-				start: time.Now().UnixNano() / int64(time.Millisecond),
+				outerStart: time.Now().UnixNano() / int64(time.Millisecond),
 			}
 			m.activeRequests[workerUUID] = r
 		}
@@ -166,8 +168,10 @@ func (m *Messenger) listen(workerUUID string, c *Connection) {
 		}
 
 		if s, ok := m.activeRequests[workerUUID]; ok != false {
-			s.end = time.Now().UnixNano() / int64(time.Millisecond)
+			s.outerEnd = time.Now().UnixNano() / int64(time.Millisecond)
 			fmt.Println(s)
+			message["outer_start"] = s.outerStart
+			message["outer_end"] = s.outerEnd
 		}
 		// Why does everything suck
 		delete(m.activeRequests, workerUUID)
