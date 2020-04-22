@@ -194,12 +194,9 @@ func (wm *WorkerManager) OnReceive(topic string, m *map[string]interface{}) {
 func (wm *WorkerManager) OnClose(topic string) {
 	// TODO this is Assuming topic is workerUUID
 	// Remove worker
-	fmt.Println("goodbye")
 	wm.workersMutex.Lock()
 	// Delete from workers
-	fmt.Println("hello")
 	if _, ok := wm.Workers[topic]; ok == true {
-		fmt.Println("Hello" + topic)
 		delete(wm.Workers, topic)
 	}
 	wm.workersMutex.Unlock()

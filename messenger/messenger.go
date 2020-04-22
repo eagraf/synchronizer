@@ -79,7 +79,7 @@ func (m *Messenger) RemoveConnection(workerUUID string) {
 
 	// Notify any listeners
 	if _, ok := m.subscriptions[workerUUID]; ok == true {
-		for i, subscriber := range m.subscriptions[workerUUID] {
+		for _, subscriber := range m.subscriptions[workerUUID] {
 			(*subscriber).OnClose(workerUUID)
 		}
 	}
