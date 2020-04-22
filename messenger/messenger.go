@@ -74,13 +74,12 @@ func (m *Messenger) AddConnection(workerUUID string, connection *websocket.Conn)
 
 // RemoveConnection stops listening on a connection
 func (m *Messenger) RemoveConnection(workerUUID string) {
-
 	// Delete connection
 	delete(m.connections, workerUUID)
 
 	// Notify any listeners
 	if _, ok := m.subscriptions[workerUUID]; ok == true {
-		for _, subscriber := range m.subscriptions[workerUUID] {
+		for i, subscriber := range m.subscriptions[workerUUID] {
 			(*subscriber).OnClose(workerUUID)
 		}
 	}
@@ -96,12 +95,11 @@ func (m *Messenger) AddSubscriber(subscriber Subscriber, topics []string) {
 		if _, ok := m.subscriptions[topic]; ok == false {
 			// If not make topic
 			m.subscriptions[topic] = make(map[string]*Subscriber)
-		} else {
-			// Check if already subscribed
-			if _, ok := m.subscriptions[topic][subscriber.GetUUID()]; ok == false {
-				m.subscriptions[topic][subscriber.GetUUID()] = &subscriber
-				subscriber.AddSubscription(topic)
-			}
+		}
+		// Check if already subscribed
+		if _, ok := m.subscriptions[topic][subscriber.GetUUID()]; ok == false {
+			m.subscriptions[topic][subscriber.GetUUID()] = &subscriber
+			subscriber.AddSubscription(topic)
 		}
 	}
 }

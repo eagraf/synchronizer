@@ -73,6 +73,7 @@ func (wm *WorkerManager) AddWorker(workerType string, connection *websocket.Conn
 	// Register this worker with the messenger and send a registration response
 	m := messenger.GetMessengerSingleton()
 	m.AddConnection(worker.UUID, worker.connection)
+	m.AddSubscriber(wm, []string{worker.UUID}) // Subscribe to worker
 	m.SendMessage(worker.UUID, &RegistrationResponse{worker.UUID})
 
 	return worker.UUID
@@ -165,7 +166,6 @@ func (wm *WorkerManager) allocate(worker Worker, mapIntent *tasks.Intent) {
 		// TODO error handling
 		// TODO better handling of subscribers
 		m.AddSubscriber(ti, []string{worker.UUID})
-		m.AddSubscriber(wm, []string{worker.UUID})
 		m.SendMessage(worker.UUID, mapIntent)
 	}
 }
@@ -194,9 +194,12 @@ func (wm *WorkerManager) OnReceive(topic string, m *map[string]interface{}) {
 func (wm *WorkerManager) OnClose(topic string) {
 	// TODO this is Assuming topic is workerUUID
 	// Remove worker
+	fmt.Println("goodbye")
 	wm.workersMutex.Lock()
 	// Delete from workers
+	fmt.Println("hello")
 	if _, ok := wm.Workers[topic]; ok == true {
+		fmt.Println("Hello" + topic)
 		delete(wm.Workers, topic)
 	}
 	wm.workersMutex.Unlock()
