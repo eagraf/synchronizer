@@ -173,6 +173,7 @@ func (m *Messenger) listen(workerUUID string, c *Connection) {
 			fmt.Println(err)
 		}
 
+		fmt.Println(message)
 		if s, ok := m.activeRequests[workerUUID]; ok != false {
 			s.outerEnd = time.Now().UnixNano() / int64(time.Millisecond)
 			message["outer_start"] = s.outerStart
