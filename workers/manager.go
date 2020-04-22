@@ -116,19 +116,6 @@ func (wm *WorkerManager) Start() {
 				worker := <-wm.AvailableWorkers
 				wm.allocate(worker, mapIntent)
 				wm.allocationMutex.Unlock()
-				// Check if worker is still connected
-				/*if _, ok := wm.Workers[worker.UUID]; ok == true {
-					fmt.Printf("Allocating worker %v to task %v (intent listener)\n", worker.UUID, mapIntent.TaskUUID)
-					// Release write mutex
-					// Send message to worker and add subscription
-					m := messenger.GetMessengerSingleton()
-					ti, _ := tasks.GetTaskServiceSingleton().GetTaskInstance(mapIntent.TaskUUID)
-					// TODO error handling
-					// TODO better handling of subscribers
-					m.AddSubscriber(ti, []string{worker.UUID})
-					m.AddSubscriber(wm, []string{worker.UUID})
-					m.SendMessage(worker.UUID, mapIntent)
-				}*/
 
 			case worker := <-wm.AvailableWorkers:
 				fmt.Println("Received worker")
@@ -138,19 +125,6 @@ func (wm *WorkerManager) Start() {
 				mapIntent := <-wm.MapTaskQueue
 				wm.allocate(worker, mapIntent)
 				wm.allocationMutex.Unlock()
-				/*
-					// TODO need to check if worker is still available
-					fmt.Printf("Allocating worker %v to task %v (worker listener)\n", worker.UUID, mapIntent.TaskUUID)
-					// Release write mutex
-					wm.allocationMutex.Unlock()
-
-					// Send message to worker and add subscription
-					m := messenger.GetMessengerSingleton()
-					ti, _ := tasks.GetTaskServiceSingleton().GetTaskInstance(mapIntent.TaskUUID)
-					// TODO error handling
-					m.AddSubscriber(ti, []string{worker.UUID})
-					m.AddSubscriber(wm, []string{worker.UUID})
-					m.SendMessage(worker.UUID, mapIntent)*/
 			}
 		}
 	}()
@@ -188,6 +162,11 @@ func (wm *WorkerManager) OnReceive(topic string, m *map[string]interface{}) {
 	//wm.allocationMutex.Lock()
 	wm.AvailableWorkers <- worker
 	//wm.allocationMutex.Unlock()
+}
+
+// OnSend implements a messenger subscriber method
+func (wm *WorkerManager) OnSend(topic string) {
+	// Do nothing for now
 }
 
 // OnClose implements a messenger subscriber method

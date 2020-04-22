@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/eagraf/synchronizer/messenger"
 	"github.com/google/uuid"
@@ -13,24 +14,26 @@ type TaskInstance struct {
 	TaskType          string
 	TaskSpecification TaskType `json:"-"`
 	Config            TaskConfig
-	intentQueue       chan *Intent `json:"-"` // Channel of incoming tasks
-	PartialResults    []interface{}
+	intentQueue       chan *Intent  `json:"-"` // Channel of incoming tasks
+	PartialResults    []interface{} `json:"-"`
 	State             interface{}
 	RequestTimes      []RequestTime
+	StartTime         int64
+	EndTime           int64
 	subscriptions     map[string]bool
 }
 
 type RequestTime struct {
-	workerUUID    string
-	start         int64
-	end           int64
-	intermediates []IntermediateTime
+	WorkerUUID    string
+	Start         int64
+	End           int64
+	Intermediates []IntermediateTime
 }
 
 type IntermediateTime struct {
-	name  string
-	start int64
-	end   int64
+	Name  string
+	Start int64
+	End   int64
 }
 
 // Start new instance of a task
@@ -89,20 +92,40 @@ func (ti *TaskInstance) GetUUID() string {
 
 // OnReceive implements a messenger subscriber method
 func (ti *TaskInstance) OnReceive(topic string, m *map[string]interface{}) {
-	fmt.Println("OnReceive", (*m)["start"], (*m)["end"])
 
 	ti.PartialResults = append(ti.PartialResults, m)
-	fmt.Println(ti.PartialResults)
 	// TODO this is super hacky dont do this
 	//ti.PartialResults[topic+"/"+len(ti.PartialResults)] = m
 
+	// Update the request time list
+	ti.RequestTimes = append(ti.RequestTimes, RequestTime{
+		WorkerUUID: topic,
+		Start:      int64((*m)["outer_start"].(int64)),
+		End:        int64((*m)["outer_end"].(int64)),
+		Intermediates: []IntermediateTime{
+			IntermediateTime{
+				Name:  "execution",
+				Start: int64((*m)["start"].(float64)),
+				End:   int64((*m)["end"].(float64)),
+			},
+		},
+	})
+
 	if len(ti.PartialResults) == ti.Config.NumWorkers {
+		ti.EndTime = time.Now().UnixNano() / int64(time.Millisecond)
 		// Stop listening to all subscriptions
 		for s := range ti.subscriptions {
 			messenger.GetMessengerSingleton().RemoveSubscriber(ti, s)
 		}
 
 		// Trigger reduce intent
+	}
+}
+
+// OnSend implements a messenger subscriber method
+func (ti *TaskInstance) OnSend(topic string) {
+	if ti.StartTime == 0 {
+		ti.StartTime = time.Now().UnixNano() / int64(time.Millisecond)
 	}
 }
 

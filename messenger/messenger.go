@@ -30,6 +30,7 @@ type Subscriber interface {
 	AddSubscription(topic string)
 	GetUUID() string
 	OnReceive(topic string, m *map[string]interface{})
+	OnSend(topic string)
 	OnClose(string)
 }
 
@@ -138,6 +139,11 @@ func (m *Messenger) SendMessage(workerUUID string, payload interface{}) {
 			m.activeRequests[workerUUID] = r
 		}
 
+		// Notify all subscribers of send
+		for _, subscriber := range m.subscriptions[workerUUID] {
+			(*subscriber).OnSend(workerUUID)
+		}
+
 		// Send the message over websocket
 		m.connections[workerUUID].mutex.Lock()
 		err = m.connections[workerUUID].connection.WriteMessage(websocket.TextMessage, buffer)
@@ -174,6 +180,8 @@ func (m *Messenger) listen(workerUUID string, c *Connection) {
 		}
 		// Why does everything suck
 		delete(m.activeRequests, workerUUID)
+
+		// Notify all subscribers
 		// Use workerUUID as a topic for now
 		for _, subscriber := range m.subscriptions[workerUUID] {
 			(*subscriber).OnReceive(workerUUID, &message)
