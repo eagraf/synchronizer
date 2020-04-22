@@ -166,7 +166,11 @@ func (m *Messenger) listen(workerUUID string, c *Connection) {
 			m.RemoveConnection(workerUUID)
 			return
 		}
-		fmt.Println(buffer)
+
+		if string(buffer) == "hello" {
+			fmt.Println("continuing")
+			continue
+		}
 
 		// Unmarshal the message
 		var message map[string]interface{}
@@ -175,17 +179,14 @@ func (m *Messenger) listen(workerUUID string, c *Connection) {
 			fmt.Println(err)
 		}
 
-		fmt.Println(message)
 		if s, ok := m.activeRequests[workerUUID]; ok != false {
 			s.outerEnd = time.Now().UnixNano() / int64(time.Millisecond)
 			message["outer_start"] = s.outerStart
 			message["outer_end"] = s.outerEnd
 		}
-		fmt.Println(message, &message)
 		// Why does everything suck
 		delete(m.activeRequests, workerUUID)
 
-		fmt.Println(message, &message)
 		// Notify all subscribers
 		// Use workerUUID as a topic for now
 		for _, subscriber := range m.subscriptions[workerUUID] {

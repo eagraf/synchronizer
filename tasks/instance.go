@@ -93,9 +93,6 @@ func (ti *TaskInstance) GetUUID() string {
 // OnReceive implements a messenger subscriber method
 func (ti *TaskInstance) OnReceive(topic string, m *map[string]interface{}) {
 
-	fmt.Println("Last print")
-	fmt.Println(m)
-
 	ti.PartialResults = append(ti.PartialResults, m)
 	// TODO this is super hacky dont do this
 	//ti.PartialResults[topic+"/"+len(ti.PartialResults)] = m
