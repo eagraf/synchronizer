@@ -17,7 +17,7 @@ import (
 // TODO enforce enumerated deviceTypes (i.e. "cloud", "mobile" workers)
 type Worker struct {
 	UUID       string
-	workerType string
+	WorkerType string
 	connection *websocket.Conn `json:"-"`
 }
 
@@ -57,7 +57,7 @@ func (wm *WorkerManager) AddWorker(workerType string, connection *websocket.Conn
 	var worker Worker
 	// Generate new UUID for worker
 	worker.UUID = uuid.New().String()
-	worker.workerType = workerType
+	worker.WorkerType = workerType
 	worker.connection = connection
 
 	// Get write mutex

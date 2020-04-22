@@ -42,9 +42,6 @@ func GetTaskServiceSingleton() *TaskService {
 
 // GetTasks gets all ongoing tasks
 func (ts *TaskService) GetTasks(w http.ResponseWriter, r *http.Request) {
-	for _, vak := range ts.CurrentTasks {
-		fmt.Println("hell", vak.PartialResults)
-	}
 	buffer, err := json.Marshal(ts.CurrentTasks)
 	if err != nil {
 		fmt.Println(err)
