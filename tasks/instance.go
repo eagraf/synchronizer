@@ -26,6 +26,7 @@ type TaskInstance struct {
 
 type RequestTime struct {
 	WorkerUUID    string
+	Device        string
 	Start         int64
 	End           int64
 	Intermediates []IntermediateTime
@@ -101,6 +102,7 @@ func (ti *TaskInstance) OnReceive(topic string, m *map[string]interface{}) {
 	// Update the request time list
 	ti.RequestTimes = append(ti.RequestTimes, RequestTime{
 		WorkerUUID: topic,
+		Device:     ((*m)["device"].(string)),
 		Start:      int64((*m)["outer_start"].(int64)),
 		End:        int64((*m)["outer_end"].(int64)),
 		Intermediates: []IntermediateTime{
