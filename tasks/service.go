@@ -91,6 +91,7 @@ func (ts *TaskService) PostTask(w http.ResponseWriter, r *http.Request) {
 		intentQueue:    make(chan *Intent),
 		PartialResults: make([]interface{}, 0),
 		RequestTimes:   make([]RequestTime, 0),
+		Input:          body.Input,
 	}
 
 	// Start the task

@@ -17,6 +17,7 @@ type TaskInstance struct {
 	intentQueue       chan *Intent  `json:"-"` // Channel of incoming tasks
 	PartialResults    []interface{} `json:"-"`
 	State             interface{}
+	Input             interface{}
 	RequestTimes      []RequestTime
 	StartTime         int64
 	EndTime           int64
