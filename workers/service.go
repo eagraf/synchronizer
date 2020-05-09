@@ -1,6 +1,7 @@
 package workers
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -53,6 +54,18 @@ func (ws *WorkerService) RegisterWorker(w http.ResponseWriter, r *http.Request) 
 
 	// Writeback UUID and handoff connection to WorkerManager
 	_ = ws.wm.AddWorker(workerType[0], conn)
+}
+
+// GetWorkers gets a list of active workers
+func (ws *WorkerService) GetWorkers(w http.ResponseWriter, r *http.Request) {
+	buffer, err := json.Marshal(ws.wm.Workers)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "Failed to marshal workers", 500)
+		return
+	}
+
+	w.Write(buffer)
 }
 
 // DeleteWorker removes a worker from the pool

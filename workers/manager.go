@@ -1,7 +1,6 @@
 package workers
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -18,8 +17,8 @@ import (
 // TODO enforce enumerated deviceTypes (i.e. "cloud", "mobile" workers)
 type Worker struct {
 	UUID       string
-	workerType string
-	connection *websocket.Conn
+	WorkerType string
+	connection *websocket.Conn `json:"-"`
 }
 
 // WorkerManager keeps a table of all active wrokers
@@ -41,8 +40,8 @@ type RegistrationResponse struct {
 var wmSingleton = WorkerManager{
 	Workers:          make(map[string]Worker),
 	AvailableWorkers: make(chan Worker, 1024),
-	AllocatedWorkers: make(map[string][]Worker),
-	MapTaskQueue:     make(chan *tasks.Intent),
+	AllocatedWorkers: make(map[string][]Worker),      // TODO actually use allocations rather than relying on availability queue
+	MapTaskQueue:     make(chan *tasks.Intent, 1024), // TODO figure out optimal buffering length
 	workersMutex:     sync.RWMutex{},
 	allocationMutex:  sync.RWMutex{},
 }
@@ -58,10 +57,11 @@ func (wm *WorkerManager) AddWorker(workerType string, connection *websocket.Conn
 	var worker Worker
 	// Generate new UUID for worker
 	worker.UUID = uuid.New().String()
-	worker.workerType = workerType
+	worker.WorkerType = workerType
 	worker.connection = connection
 
 	// Get write mutex
+	// TODO determine if WLock / WUnlock is more proper
 	wm.workersMutex.Lock()
 	// Add to workerset
 	wm.Workers[worker.UUID] = worker
@@ -73,6 +73,7 @@ func (wm *WorkerManager) AddWorker(workerType string, connection *websocket.Conn
 	// Register this worker with the messenger and send a registration response
 	m := messenger.GetMessengerSingleton()
 	m.AddConnection(worker.UUID, worker.connection)
+	m.AddSubscriber(wm, []string{worker.UUID}) // Subscribe to worker
 	m.SendMessage(worker.UUID, &RegistrationResponse{worker.UUID})
 
 	return worker.UUID
@@ -113,45 +114,69 @@ func (wm *WorkerManager) Start() {
 				// Get write mutex
 				wm.allocationMutex.Lock()
 				worker := <-wm.AvailableWorkers
-				// TODO need to check if worker is still available
-				fmt.Printf("Allocating worker %v to task %v (intent listener)\n", worker.UUID, mapIntent.TaskUUID)
-				// Release write mutex
+				wm.allocate(worker, mapIntent)
 				wm.allocationMutex.Unlock()
-				//go wm.MessageWorker(worker.UUID, mapIntent.TaskUUID, mapIntent)
-				messenger.GetMessengerSingleton().SendMessage(worker.UUID, mapIntent)
 
 			case worker := <-wm.AvailableWorkers:
 				fmt.Println("Received worker")
 				// Get write mutex
+				// TODO This mutex might need to surroudn ^^ worker channel, not mapTask channel
 				wm.allocationMutex.Lock()
 				mapIntent := <-wm.MapTaskQueue
-				// TODO need to check if worker is still available
-				fmt.Printf("Allocating worker %v to task %v (worker listener)\n", worker.UUID, mapIntent.TaskUUID)
-				// Release write mutex
+				wm.allocate(worker, mapIntent)
 				wm.allocationMutex.Unlock()
-
-				//go wm.MessageWorker(worker.UUID, mapIntent.TaskUUID, mapIntent)
-				messenger.GetMessengerSingleton().SendMessage(worker.UUID, mapIntent)
 			}
 		}
 	}()
 }
 
-// MessageWorker sends a map intent to a worker
-// TODO determine if WriteCloser can be fixed to work with gobs => could prevent one buffer copy
-func (wm *WorkerManager) MessageWorker(workerUUID, taskUUID string, mapIntent *tasks.Intent) error {
-	// Decompose the map intent into a JSON like map
-	buffer, err := json.Marshal(mapIntent)
-	if err != nil {
-		fmt.Println(err.Error())
-		return err
+func (wm *WorkerManager) allocate(worker Worker, mapIntent *tasks.Intent) {
+	// Check if worker is still connected
+	if _, ok := wm.Workers[worker.UUID]; ok == true {
+		fmt.Printf("Allocating worker %v to task %v (intent listener)\n", worker.UUID, mapIntent.TaskUUID)
+		// Send message to worker and add subscription
+		m := messenger.GetMessengerSingleton()
+		ti, _ := tasks.GetTaskServiceSingleton().GetTaskInstance(mapIntent.TaskUUID)
+		// TODO error handling
+		// TODO better handling of subscribers
+		m.AddSubscriber(ti, []string{worker.UUID})
+		m.SendMessage(worker.UUID, mapIntent)
 	}
+}
 
-	// Send the intent to the worker
-	err = wm.Workers[workerUUID].connection.WriteMessage(websocket.TextMessage, buffer)
-	if err != nil {
-		fmt.Println(err.Error())
-		return err
+// AddSubscription implements a messenger subscriber method
+func (wm *WorkerManager) AddSubscription(topic string) {
+	// Do nothing for now
+}
+
+// GetUUID implements a messenger subscriber method
+func (wm *WorkerManager) GetUUID() string {
+	return "WorkerManager" // Probably should define this as a constant somewhere
+}
+
+// OnReceive implements a messenger subscriber method
+func (wm *WorkerManager) OnReceive(topic string, m *map[string]interface{}) {
+	// TODO rn assuming topic is worker UUID
+	// TODO evaluate if mutex is necessary here (in fact it often breaks things if you add it back)
+	worker := wm.Workers[topic]
+	//wm.allocationMutex.Lock()
+	wm.AvailableWorkers <- worker
+	//wm.allocationMutex.Unlock()
+}
+
+// OnSend implements a messenger subscriber method
+func (wm *WorkerManager) OnSend(topic string) {
+	// Do nothing for now
+}
+
+// OnClose implements a messenger subscriber method
+func (wm *WorkerManager) OnClose(topic string) {
+	// TODO this is Assuming topic is workerUUID
+	// Remove worker
+	wm.workersMutex.Lock()
+	// Delete from workers
+	if _, ok := wm.Workers[topic]; ok == true {
+		delete(wm.Workers, topic)
 	}
-	return nil
+	wm.workersMutex.Unlock()
 }

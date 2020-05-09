@@ -3,6 +3,8 @@ package main
 import (
 	"net/http"
 
+	"github.com/eagraf/synchronizer/gameoflife"
+	"github.com/eagraf/synchronizer/tasks"
 	"github.com/eagraf/synchronizer/workers"
 	"github.com/go-chi/chi"
 )
@@ -10,8 +12,11 @@ import (
 // RegisterRoutes defines routes for REST API using the chi router
 // TODO i guess technically this should be singleton ensured as well
 func RegisterRoutes() http.Handler {
+	var taskRegistry map[string]tasks.TaskType = make(map[string]tasks.TaskType, 0)
+	taskRegistry["GOL"] = gameoflife.GOLTaskType
 
 	workerService := workers.GetWorkerService()
+	taskService := tasks.InitializeTaskService(taskRegistry, workers.GetWorkerManager().MapTaskQueue)
 
 	r := chi.NewRouter()
 	r.Route("/health", func(r chi.Router) {
@@ -19,8 +24,13 @@ func RegisterRoutes() http.Handler {
 	})
 	r.Route("/workers", func(r chi.Router) {
 		//r.Post("/", workerService.PostWorker)
-		r.Get("/", workerService.RegisterWorker)
+		r.Get("/", workerService.GetWorkers)
 		r.Delete("/{uuid}/", workerService.DeleteWorker)
+		r.Get("/register/", workerService.RegisterWorker) // TODO probably should be named better
+	})
+	r.Route("/tasks", func(r chi.Router) {
+		r.Post("/", taskService.PostTask)
+		r.Get("/", taskService.GetTasks)
 	})
 	return r
 }
