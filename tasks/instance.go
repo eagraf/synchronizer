@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/eagraf/synchronizer/messenger"
-	"github.com/google/uuid"
 )
 
 // TaskInstance models an ongoing task
@@ -71,10 +70,10 @@ func (ti *TaskInstance) Start(mapTaskQueue chan *Intent, input *map[string]inter
 func (ti *TaskInstance) handleSetup(intent *Intent) {
 
 	// Execute setup procedure for task
-	taskInstance, mapIntents := ti.TaskSpecification.Setup(intent)
+	_, mapIntents := ti.TaskSpecification.Setup(intent)
 
 	// Generate a UUID for the task
-	taskInstance.UUID = uuid.New().String()
+	//	taskInstance.UUID = uuid.New().String()
 
 	// Add map intents to the queue
 	for _, mi := range mapIntents {
