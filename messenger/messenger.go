@@ -1,6 +1,8 @@
 package messenger
 
 import (
+	"bytes"
+	"compress/zlib"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -125,11 +127,18 @@ func (m *Messenger) SendMessage(workerUUID string, payload interface{}) {
 			MessageType: messageType,
 			Payload:     payload,
 		}
+
 		// Encode message as json
 		buffer, err := json.Marshal(message)
 		if err != nil {
 			fmt.Println(err.Error())
 		}
+
+		// Compress message
+		var deflated bytes.Buffer
+		zw := zlib.NewWriter(&deflated)
+		zw.Write(buffer)
+		zw.Close()
 
 		// Add to request queue
 		if messageType == "Intent" {
@@ -145,9 +154,10 @@ func (m *Messenger) SendMessage(workerUUID string, payload interface{}) {
 			(*subscriber).OnSend(workerUUID)
 		}
 
+		fmt.Println(string(deflated.Bytes()))
 		// Send the message over websocket
 		m.connections[workerUUID].mutex.Lock()
-		err = m.connections[workerUUID].connection.WriteMessage(websocket.TextMessage, buffer)
+		err = m.connections[workerUUID].connection.WriteMessage(websocket.BinaryMessage, deflated.Bytes())
 		if err != nil {
 			fmt.Println(err.Error())
 		}
@@ -167,6 +177,21 @@ func (m *Messenger) listen(workerUUID string, c *Connection) {
 			return
 		}
 
+		fmt.Println(buffer)
+
+		// Decompress message
+		zr, err := zlib.NewReader(bytes.NewReader(buffer))
+		if err != nil {
+			fmt.Println("Failed to decompress: " + err.Error())
+		}
+		// Read into byte array
+		inflated := new(bytes.Buffer)
+		_, err = inflated.ReadFrom(zr)
+		if err != nil {
+			fmt.Println("Failed to decompress: " + err.Error())
+		}
+
+		// TODO get rid of this
 		if string(buffer) == "hello" {
 			fmt.Println("continuing")
 			continue
@@ -174,7 +199,7 @@ func (m *Messenger) listen(workerUUID string, c *Connection) {
 
 		// Unmarshal the message
 		var message map[string]interface{}
-		err = json.Unmarshal(buffer, &message)
+		err = json.Unmarshal(inflated.Bytes(), &message)
 		if err != nil {
 			fmt.Println(err)
 		}
