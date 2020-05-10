@@ -177,18 +177,18 @@ func (m *Messenger) listen(workerUUID string, c *Connection) {
 			return
 		}
 
-		fmt.Println(buffer)
-
 		// Decompress message
 		zr, err := zlib.NewReader(bytes.NewReader(buffer))
 		if err != nil {
 			fmt.Println("Failed to decompress: " + err.Error())
+			continue
 		}
 		// Read into byte array
 		inflated := new(bytes.Buffer)
 		_, err = inflated.ReadFrom(zr)
 		if err != nil {
 			fmt.Println("Failed to decompress: " + err.Error())
+			continue
 		}
 
 		// TODO get rid of this
@@ -202,6 +202,7 @@ func (m *Messenger) listen(workerUUID string, c *Connection) {
 		err = json.Unmarshal(inflated.Bytes(), &message)
 		if err != nil {
 			fmt.Println(err)
+			continue
 		}
 
 		if s, ok := m.activeRequests[workerUUID]; ok != false {
