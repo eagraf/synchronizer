@@ -179,11 +179,6 @@ func TestDone(t *testing.T) {
 	}
 
 }
-
-func TestDoneIncomplete(t *testing.T) {
-	// Pretty sure this is impossible
-}
-
 func TestModifyAfterDone(t *testing.T) {
 	mb := MessageBuilder{}
 	mb.NewMessage("test-message", "test-request-id").Done()
@@ -232,24 +227,74 @@ func TestFromBuffer(t *testing.T) {
 	}
 }
 
+func TestFromBufferError(t *testing.T) {
+	mb := MessageBuilder{}
+	_, err := mb.FromBuffer([]byte("Hello"))
+	if err != nil {
+		t.Error("FromBuffer should return an error")
+	}
+}
+
 // Message Tests
 
 func TestGetMetadata(t *testing.T) {
+	mb := MessageBuilder{}
+	message, _ := mb.NewMessage("test-message", "test-request-id").Done()
 
+	if message.GetMetadata().MessageType != "test-request-id" {
+		t.Error("Invalid metadata")
+	}
+	if message.GetMetadata().Request != "test-request-id" {
+		t.Error("Invalid metadata")
+	}
 }
 
 func TestGetPayload(t *testing.T) {
+	p := []byte("Hello, World")
+	mb := MessageBuilder{}
+	message, _ := mb.NewMessage("test-message", "test-request-id").
+		SetPayload(p).
+		Done()
 
+	payload, _ := message.GetPayload()
+	if payload == nil {
+		t.Error("Payload is nil")
+	}
+	if len(payload) != 12 {
+		t.Error("Payload length incorrect")
+	}
 }
 
 func TestGetEmptyPayload(t *testing.T) {
+	mb := MessageBuilder{}
+	message, _ := mb.NewMessage("test-message", "test-request-id").Done()
 
+	_, err := message.GetPayload()
+	if err != nil {
+		t.Error("Error should be returned")
+	}
 }
 
 func TestGetHeaderString(t *testing.T) {
+	mb := MessageBuilder{}
+	message, _ := mb.NewMessage("test-message", "test-request-id").
+		AddHeader("test-key", "test-value").
+		Done()
 
+	if message.GetHeader("test-key") != "test-value" {
+		t.Error("Incorrect value returned")
+	}
 }
 
 func TestGetHeaderJSON(t *testing.T) {
+	mb := MessageBuilder{}
+	headerMap := make(map[string]interface{})
+	headerMap["a"] = "b"
+	message, _ := mb.NewMessage("test-message", "test-request-id").
+		AddHeader("test-key", headerMap).
+		Done()
 
+	if message.GetHeader("test-key").(map[string]interface{})["a"] != "b" {
+		t.Error("JSON header failed to get key")
+	}
 }
