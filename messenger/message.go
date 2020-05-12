@@ -1,8 +1,5 @@
 package messenger
 
-/*
- */
-
 // Message encapsulates information passed over websocket connections
 /*
  * Two ways of creating a Message
@@ -38,6 +35,7 @@ type Metadata struct {
 // MessageBuilder constructs a new message struct
 type MessageBuilder struct {
 	message *Message
+	err     error
 }
 
 // Message methods
@@ -60,26 +58,27 @@ func (m *Message) GetPayload() ([]byte, error) {
 // MessageBuilder methods
 
 // FromBuffer creates message struct from received buffer, and decompress
-func (mb *MessageBuilder) FromBuffer([]byte) *Message {
-	return nil
+func (mb *MessageBuilder) FromBuffer([]byte) (*Message, error) {
+	return nil, nil
 }
 
 // NewMessage begins message creation, taking metadata as input
-func (mb *MessageBuilder) NewMessage(messageType string, request string) *Message {
+func (mb *MessageBuilder) NewMessage(messageType string, request string) *MessageBuilder {
 	return nil
 }
 
 // AddHeader adds a key value pair to metadata. The value can be either a string, number, boolean, or JSON object
-func (mb *MessageBuilder) AddHeader(key string, value interface{}) *Message {
+func (mb *MessageBuilder) AddHeader(key string, value interface{}) *MessageBuilder {
 	return nil
 }
 
 // SetPayload sets I/O data for workunit
-func (mb *MessageBuilder) SetPayload([]byte) *Message {
+func (mb *MessageBuilder) SetPayload([]byte) *MessageBuilder {
 	return nil
 }
 
 // Done completes message building and prepares for sending by compressing the data
-func (mb *MessageBuilder) Done() *Message {
-	return nil
+// Returns an error if any of the previous build steps has been incorrect
+func (mb *MessageBuilder) Done() (*Message, error) {
+	return nil, nil
 }
