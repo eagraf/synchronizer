@@ -12,6 +12,7 @@ import (
 func TestNewMessage(t *testing.T) {
 	// Call function
 	mb := MessageBuilder{}
+	mb.NewMessage("test-message", "test-request-id")
 	m := mb.message
 
 	// Check valid uuid
@@ -20,7 +21,7 @@ func TestNewMessage(t *testing.T) {
 	}
 
 	// Check timestamp is
-	if _, err := time.Parse(time.StampMilli, m.metadata.Timestamp); err == nil {
+	if _, err := time.Parse(time.StampMilli, m.metadata.Timestamp); err != nil {
 		t.Error("Invalid timestamp")
 	}
 
@@ -35,7 +36,7 @@ func TestNewMessage(t *testing.T) {
 	}
 
 	// Check headers are initialized
-	if m.GetMetadata().Headers == nil {
+	if m.metadata.Headers == nil {
 		t.Error("Headers not initialized")
 	}
 	if len(m.metadata.Headers) != 0 {
@@ -52,7 +53,7 @@ func TestNewMessage(t *testing.T) {
 	if m.received != false {
 		t.Error("This message is being built, not received")
 	}
-	if m.offset != 4 { // TODO make sure this is correct
+	if m.offset != 0 { // TODO make sure this is correct
 		t.Error("Incorrect offset")
 	}
 }
