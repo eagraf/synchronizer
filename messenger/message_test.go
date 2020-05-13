@@ -67,11 +67,30 @@ func TestAddHeaderString(t *testing.T) {
 	if ok != true {
 		t.Error("Key is not added")
 	}
-	if v != "test-request-id" {
-		t.Error("Value incorrect")
+	if v != "test-value" {
+		t.Error("Value incorrect: " + v.(string))
 	}
 }
 
+func TestAddHeaderMap(t *testing.T) {
+	mb := MessageBuilder{}
+	headerMap := make(map[string]interface{})
+	headerMap["a"] = "b"
+	mb.NewMessage("test-message", "test-request-id").
+		AddHeader("test-key", headerMap)
+
+	_, ok := mb.message.metadata.Headers["test-key"]
+
+	if ok == true {
+		t.Error("Key is added")
+	}
+	if mb.err == nil {
+		t.Error("MessageBuilder has no error")
+	}
+}
+
+// Add capability for headers to move beyond simple types
+/*
 func TestAddHeaderJSON(t *testing.T) {
 	mb := MessageBuilder{}
 	headerMap := make(map[string]interface{})
@@ -92,8 +111,9 @@ func TestAddHeaderJSON(t *testing.T) {
 	if val["a"] != "b" {
 		t.Error("Value incorrect")
 	}
-}
+}*/
 
+/*
 func TestAddHeaderStruct(t *testing.T) {
 	type testStruct struct {
 		a int
@@ -113,7 +133,7 @@ func TestAddHeaderStruct(t *testing.T) {
 	if len(mb.message.metadata.Headers) != 0 {
 		t.Error("Header was added")
 	}
-}
+}*/
 
 func TestSetPayload(t *testing.T) {
 	payload := []byte("Hello, World")
@@ -155,17 +175,6 @@ func TestDone(t *testing.T) {
 	if message.done == false {
 		t.Error("message.done not set")
 	}
-
-	// message should delete reference to payload after compression for garbage collection
-	if len(message.payload) > 0 {
-		t.Error("Payload length not 0")
-	}
-
-	// TODO stronger size check
-	if len(message.deflated) == 0 {
-		t.Error("Message was not compressed")
-	}
-
 	marshalledMetadata, _ := json.Marshal(message.metadata)
 	if message.offset != int32(len(marshalledMetadata)+4) {
 		t.Error("Offset value incorrect")
@@ -197,12 +206,12 @@ func TestModifyAfterDone(t *testing.T) {
 
 func TestFromBuffer(t *testing.T) {
 	payload := []byte("Hello, World")
-	headerMap := make(map[string]interface{})
-	headerMap["a"] = "b"
+	//headerMap := make(map[string]interface{})
+	//headerMap["a"] = "b"
 	mb := MessageBuilder{}
 	message, _ := mb.NewMessage("test-message", "test-request-id").
 		AddHeader("test-key", "test-value").
-		AddHeader("test-key-2", headerMap).
+		//AddHeader("test-key-2", headerMap).
 		SetPayload(payload).
 		Done()
 
@@ -242,7 +251,7 @@ func TestGetMetadata(t *testing.T) {
 	mb := MessageBuilder{}
 	message, _ := mb.NewMessage("test-message", "test-request-id").Done()
 
-	if message.GetMetadata().MessageType != "test-request-id" {
+	if message.GetMetadata().MessageType != "test-message" {
 		t.Error("Invalid metadata")
 	}
 	if message.GetMetadata().Request != "test-request-id" {
@@ -271,7 +280,7 @@ func TestGetEmptyPayload(t *testing.T) {
 	message, _ := mb.NewMessage("test-message", "test-request-id").Done()
 
 	_, err := message.GetPayload()
-	if err != nil {
+	if err == nil {
 		t.Error("Error should be returned")
 	}
 }
@@ -282,12 +291,31 @@ func TestGetHeaderString(t *testing.T) {
 		AddHeader("test-key", "test-value").
 		Done()
 
-	if message.GetHeader("test-key") != "test-value" {
+	val, ok := message.GetHeader("test-key")
+	if val != "test-value" {
 		t.Error("Incorrect value returned")
+	}
+	if ok == false {
+		t.Error("Ok should be false")
 	}
 }
 
-func TestGetHeaderJSON(t *testing.T) {
+func TestGetHeaderFail(t *testing.T) {
+
+	mb := MessageBuilder{}
+	message, _ := mb.NewMessage("test-message", "test-request-id").
+		Done()
+
+	val, ok := message.GetHeader("test-key")
+	if val != nil {
+		t.Error("Incorrect value returned")
+	}
+	if ok == true {
+		t.Error("Ok should be false")
+	}
+}
+
+/*func TestGetHeaderJSON(t *testing.T) {
 	mb := MessageBuilder{}
 	headerMap := make(map[string]interface{})
 	headerMap["a"] = "b"
@@ -298,4 +326,4 @@ func TestGetHeaderJSON(t *testing.T) {
 	if message.GetHeader("test-key").(map[string]interface{})["a"] != "b" {
 		t.Error("JSON header failed to get key")
 	}
-}
+}*/
