@@ -2,7 +2,7 @@ package messenger
 
 // Subscriber is an interface implemented by routines that need to listen for specific messages
 type Subscriber interface {
-	GetIdentifier()                                          // Used to identify if the subscriber is already applied to a topic
+	GetIdentifier() string                                   // Used to identify if the subscriber is already applied to a topic
 	OnReceive(topic string, message *map[string]interface{}) // Callback after publish on message received
 	OnSend(topic string, message *map[string]interface{})    // Callback after publish on message sent
 	OnClose(topic string)                                    // Callback after topic closed
@@ -13,8 +13,17 @@ type PubSub struct {
 	subs map[string]map[string]*Subscriber
 }
 
+// Create a new pubsub
+func newPubSub() *PubSub {
+	ps := PubSub{
+		subs: make(map[string]map[string]*Subscriber),
+	}
+	return &ps
+}
+
 // AddSubscription applies a Subscriber to a topic
-func (ps *PubSub) AddSubscription(topic string, subscriber *Subscriber) {
+func (ps *PubSub) AddSubscription(topic string, subscriber Subscriber) {
+
 }
 
 // RemoveSubscription removes a Subscriber from a topic
@@ -34,7 +43,12 @@ func (ps *PubSub) closeTopic(topic string) {
 
 }
 
-// Notify all subscribers for a topic about some event
-func (ps *PubSub) publish(topic string, message *Message) {
+// Notify all relevant subscribers about a message received
+func (ps *PubSub) publishReceived(topic string, message *Message) {
+
+}
+
+// Notify all relevant subscribers about a message sent
+func (ps *PubSub) publishSend(topic string, message *Message) {
 
 }
