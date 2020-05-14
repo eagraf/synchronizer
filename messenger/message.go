@@ -1,8 +1,12 @@
 package messenger
 
 import (
+	"bytes"
+	"compress/zlib"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -23,7 +27,7 @@ import (
  * Key idea: as large ammounts of data can be transferred, minimizing the number of memory allocs is important for performance
  */
 type Message struct {
-	offset   int32     // The byte length of serialized JSON + 4
+	offset   uint32    // The byte length of serialized JSON + 4
 	metadata *Metadata // Important information about the message
 	payload  []byte    // Compressed data
 	deflated []byte    // TODO make sure this is freed after decompression (test it too?)
@@ -71,12 +75,51 @@ func (m *Message) GetPayload() ([]byte, error) {
 	return m.payload, nil
 }
 
-// MessageBuilder methods
-
 // FromBuffer creates message struct from received buffer, and decompress
-func (mb *MessageBuilder) FromBuffer([]byte) (*Message, error) {
-	return nil, nil
+func FromBuffer(buffer []byte) (*Message, error) {
+
+	// Decompress message
+	zr, err := zlib.NewReader(bytes.NewReader(buffer))
+	if err != nil {
+		return nil, err
+	}
+	// Read into byte array
+	inflatedBuffer := new(bytes.Buffer)
+	_, err = inflatedBuffer.ReadFrom(zr)
+	if err != nil {
+		return nil, err
+	}
+	inflated := inflatedBuffer.Bytes()
+
+	// Determine offset
+	offset := binary.LittleEndian.Uint32(inflated[0:4])
+
+	// Get metadata
+	var metadata *Metadata
+	err = json.Unmarshal(inflated[4:offset], &metadata)
+	fmt.Println(string(inflated[4:offset]))
+	if err != nil {
+		fmt.Println("hey!" + err.Error())
+		return nil, err
+	}
+
+	// Construct message
+	message := Message{
+		offset:   offset,
+		metadata: metadata,
+		received: true,
+		done:     true,
+	}
+
+	// Set payload if exists
+	if metadata.HasPayload {
+		message.payload = inflated[offset:]
+	}
+
+	return &message, nil
 }
+
+// MessageBuilder methods
 
 // NewMessage begins message creation, taking metadata as input
 func (mb *MessageBuilder) NewMessage(messageType string, request string) *MessageBuilder {
@@ -147,7 +190,7 @@ func (mb *MessageBuilder) Done() (*Message, error) {
 	if err != nil {
 		return nil, err
 	}
-	mb.message.offset = int32(len(metadataBuffer) + 4)
+	mb.message.offset = uint32(len(metadataBuffer) + 4)
 
 	mb.message.done = true
 	m := mb.message

@@ -176,7 +176,7 @@ func TestDone(t *testing.T) {
 		t.Error("message.done not set")
 	}
 	marshalledMetadata, _ := json.Marshal(message.metadata)
-	if message.offset != int32(len(marshalledMetadata)+4) {
+	if message.offset != uint32(len(marshalledMetadata)+4) {
 		t.Error("Offset value incorrect")
 	}
 
@@ -215,7 +215,7 @@ func TestFromBuffer(t *testing.T) {
 		SetPayload(payload).
 		Done()
 
-	message2, err := mb.FromBuffer(message.deflated)
+	message2, err := FromBuffer(message.deflated)
 	if err != nil {
 		t.Error("Error is not nil")
 	}
@@ -238,8 +238,7 @@ func TestFromBuffer(t *testing.T) {
 }
 
 func TestFromBufferError(t *testing.T) {
-	mb := MessageBuilder{}
-	_, err := mb.FromBuffer([]byte("Hello"))
+	_, err := FromBuffer([]byte("Hello"))
 	if err != nil {
 		t.Error("FromBuffer should return an error")
 	}
