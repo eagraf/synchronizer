@@ -122,7 +122,7 @@ func readMessage(buffer []byte) (*Message, error) {
 
 // Write compresses a message and writes to writer stream
 // TODO implement io.Writer?
-func writeMessage(message *Message, writer io.WriteCloser) error {
+func writeMessage(message *Message, writer io.Writer) error {
 	zw := zlib.NewWriter(writer)
 
 	// Write offset
