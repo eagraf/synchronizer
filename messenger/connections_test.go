@@ -1,6 +1,10 @@
 package messenger
 
 import (
+	"bytes"
+	"compress/zlib"
+	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -32,13 +36,51 @@ func newTestClient(URL string) (*TestClient, error) {
 	return &tc, nil
 }
 
-func (tc *TestClient) send(message *Message) {
+func (tc *TestClient) send(message *Message) error {
+	w, err := tc.conn.NextWriter(websocket.BinaryMessage)
+	if err != nil {
+		return err
+	}
 
-}
+	zw := zlib.NewWriter(w)
 
-func (tc *TestClient) receive() *Message {
+	// Write offset
+	offset := make([]byte, 4)
+	binary.LittleEndian.PutUint32(offset, uint32(message.offset))
+	zw.Write(offset)
+
+	// Write metadata
+	marshalled, err := json.Marshal(message.metadata)
+	if err != nil {
+		return err
+	}
+
+	zw.Write(marshalled)
+
+	// Write payload
+	if message.metadata.HasPayload {
+		zw.Write(message.payload)
+	}
+	err = zw.Close()
+	if err != nil {
+		return err
+	}
+	err = w.Close()
+	if err != nil {
+		return err
+	}
 	return nil
 }
+
+/*func (tc *TestClient) receive() (*Message, error) {
+
+	_, buffer, err := tc.conn.ReadMessage()
+	if err != nil {
+		return err
+	}
+	message := FromBuffer(buffer)
+	return message, nil
+}*/
 
 type mockService struct {
 	connectionManager *ConnectionManager
@@ -69,15 +111,38 @@ func (ms *mockService) mockWebsocketEndpoint(w http.ResponseWriter, r *http.Requ
 	ms.connectionManager.AddConnection(uuid.New().String(), r)
 
 	// Temporarily promote request
-	_, err := upgrader.Upgrade(w, r, nil)
+	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
 	}
+
+	_, msg, _ := conn.ReadMessage()
+	fmt.Println(string(msg))
+
+	zr, err := zlib.NewReader(bytes.NewReader(msg))
+	if err != nil {
+		fmt.Println("Failed to decompress: " + err.Error())
+	}
+	// Read into byte array
+	inflated := new(bytes.Buffer)
+	_, err = inflated.ReadFrom(zr)
+	if err != nil {
+		fmt.Println("Failed to decompress: " + err.Error())
+	}
+	fmt.Println(string(inflated.Bytes()))
 }
 
 func TestMockServiceHandshake(t *testing.T) {
 	ms := startMockService()
-	_, err := newTestClient(ms.server.URL)
+	tc, err := newTestClient(ms.server.URL)
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	// Test sending
+	mb := MessageBuilder{}
+	m, _ := mb.NewMessage("test-message", "test-request").Done()
+	err = tc.send(m)
 	if err != nil {
 		t.Error(err.Error())
 	}
