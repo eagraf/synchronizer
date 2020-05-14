@@ -204,7 +204,7 @@ func TestModifyAfterDone(t *testing.T) {
 	}
 }
 
-func TestFromBuffer(t *testing.T) {
+func TestReadMessage(t *testing.T) {
 	payload := []byte("Hello, World")
 	//headerMap := make(map[string]interface{})
 	//headerMap["a"] = "b"
@@ -215,7 +215,7 @@ func TestFromBuffer(t *testing.T) {
 		SetPayload(payload).
 		Done()
 
-	message2, err := FromBuffer(message.deflated)
+	message2, err := readMessage(message.deflated)
 	if err != nil {
 		t.Error("Error is not nil")
 	}
@@ -237,8 +237,8 @@ func TestFromBuffer(t *testing.T) {
 	}
 }
 
-func TestFromBufferError(t *testing.T) {
-	_, err := FromBuffer([]byte("Hello"))
+func TestReadMessageError(t *testing.T) {
+	_, err := readMessage([]byte("Hello"))
 	if err != nil {
 		t.Error("FromBuffer should return an error")
 	}

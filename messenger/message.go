@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"reflect"
 	"time"
 
@@ -76,7 +77,7 @@ func (m *Message) GetPayload() ([]byte, error) {
 }
 
 // FromBuffer creates message struct from received buffer, and decompress
-func FromBuffer(buffer []byte) (*Message, error) {
+func readMessage(buffer []byte) (*Message, error) {
 
 	// Decompress message
 	zr, err := zlib.NewReader(bytes.NewReader(buffer))
@@ -117,6 +118,36 @@ func FromBuffer(buffer []byte) (*Message, error) {
 	}
 
 	return &message, nil
+}
+
+// Write compresses a message and writes to writer stream
+// TODO implement io.Writer?
+func writeMessage(message *Message, writer io.WriteCloser) error {
+	zw := zlib.NewWriter(writer)
+
+	// Write offset
+	offset := make([]byte, 4)
+	binary.LittleEndian.PutUint32(offset, uint32(message.offset))
+	zw.Write(offset)
+
+	// Write metadata
+	marshalled, err := json.Marshal(message.metadata)
+	if err != nil {
+		return err
+	}
+	zw.Write(marshalled)
+
+	// Write payload
+	if message.metadata.HasPayload {
+		zw.Write(message.payload)
+	}
+	// Close zlib stream
+	// Closing writer stream is responsibility of caller
+	err = zw.Close()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // MessageBuilder methods
