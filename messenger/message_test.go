@@ -1,6 +1,7 @@
 package messenger
 
 import (
+	"bytes"
 	"encoding/json"
 	"testing"
 	"time"
@@ -206,21 +207,23 @@ func TestModifyAfterDone(t *testing.T) {
 
 func TestReadMessage(t *testing.T) {
 	payload := []byte("Hello, World")
-	//headerMap := make(map[string]interface{})
-	//headerMap["a"] = "b"
 	mb := MessageBuilder{}
 	message, _ := mb.NewMessage("test-message", "test-request-id").
 		AddHeader("test-key", "test-value").
-		//AddHeader("test-key-2", headerMap).
 		SetPayload(payload).
 		Done()
 
-	message2, err := readMessage(message.deflated)
+	// Write the message
+	buffer := new(bytes.Buffer)
+	writeMessage(message, buffer)
+
+	// Read it back again
+	message2, err := readMessage(buffer.Bytes())
 	if err != nil {
 		t.Error("Error is not nil")
 	}
 
-	if message2.metadata.MessageType != "test-request-id" {
+	if message2.metadata.MessageType != "test-message" {
 		t.Error("Invalid metadata")
 	}
 	if message2.metadata.Request != "test-request-id" {
@@ -232,14 +235,41 @@ func TestReadMessage(t *testing.T) {
 	if message2.metadata.Headers["test-key"] != "test-value" {
 		t.Error("Header missing")
 	}
-	if (message2.metadata.Headers["test-key-2"]).(map[string]interface{})["a"] != "b" {
-		t.Error("JSON header missing")
+}
+
+func TestReadMessageNoPayload(t *testing.T) {
+	mb := MessageBuilder{}
+	message, _ := mb.NewMessage("test-message", "test-request-id").
+		AddHeader("test-key", "test-value").
+		Done()
+
+	// Write the message
+	buffer := new(bytes.Buffer)
+	writeMessage(message, buffer)
+
+	// Read it back again
+	message2, err := readMessage(buffer.Bytes())
+	if err != nil {
+		t.Error("Error is not nil")
+	}
+
+	if message2.metadata.MessageType != "test-message" {
+		t.Error("Invalid metadata")
+	}
+	if message2.metadata.Request != "test-request-id" {
+		t.Error("Invalid metadata")
+	}
+	if message2.metadata.HasPayload != false {
+		t.Error("HasPayload returns true")
+	}
+	if message2.metadata.Headers["test-key"] != "test-value" {
+		t.Error("Header missing")
 	}
 }
 
 func TestReadMessageError(t *testing.T) {
 	_, err := readMessage([]byte("Hello"))
-	if err != nil {
+	if err == nil {
 		t.Error("FromBuffer should return an error")
 	}
 }
