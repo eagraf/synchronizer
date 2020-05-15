@@ -1,10 +1,12 @@
 package messenger
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -66,6 +68,9 @@ type mockService struct {
 	connectionManager *ConnectionManager
 	server            *httptest.Server
 	t                 *testing.T
+	onReceives        int
+	onSends           int
+	onCloses          int
 }
 
 // Start the test server
@@ -75,6 +80,9 @@ func startMockService(t *testing.T) *mockService {
 	ms := mockService{
 		connectionManager: cm,
 		t:                 t,
+		onReceives:        0,
+		onSends:           0,
+		onCloses:          0,
 	}
 
 	ms.server = httptest.NewServer(http.HandlerFunc(ms.mockWebsocketEndpoint))
@@ -95,6 +103,26 @@ func (ms *mockService) mockWebsocketEndpoint(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		ms.t.Error(err.Error())
 	}
+	err = ms.connectionManager.subscriptions.AddSubscription(r.Header.Get("clientID"), ms)
+	if err != nil {
+		ms.t.Error(err.Error())
+	}
+}
+
+func (ms *mockService) GetIdentifier() string {
+	return "mock-service-identifier"
+}
+
+func (ms *mockService) OnReceive(topic string, message *Message) {
+	ms.onReceives++
+}
+
+func (ms *mockService) OnSend(topic string, message *Message) {
+	ms.onSends++
+}
+
+func (ms *mockService) OnClose(topic string) {
+	ms.onCloses++
 }
 
 // Tests AddConnection
@@ -113,9 +141,21 @@ func TestMockServiceHandshake(t *testing.T) {
 		t.Error(err.Error())
 	}
 
+	// TODO figure out a better way of testing that doesn't require sleeps to enforce sequential=>deterministic testing
+	time.Sleep(time.Second)
+
 	ms.connectionManager.RemoveConnection("client-1")
 	if len(ms.connectionManager.connections) != 0 {
 		t.Error("There should be no remaining connections")
+	}
+
+	// These tests must be performed at end to avoid race condition
+	if ms.onReceives != 1 {
+		fmt.Println(ms.onReceives)
+		t.Error("Expected 1 invocation of OnReceive")
+	}
+	if ms.onCloses != 1 {
+		t.Error("Expected 1 invocation of OnClose")
 	}
 }
 
@@ -147,10 +187,22 @@ func TestMessaging(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
+	time.Sleep(time.Second)
 
 	ms.connectionManager.RemoveConnection("client-1")
 	if len(ms.connectionManager.connections) != 0 {
 		t.Error("There should be no remaining connections")
+	}
+
+	// These tests must be performed at end to avoid race condition
+	if ms.onReceives != 1 {
+		t.Error("Expected 1 invocation of OnReceive")
+	}
+	if ms.onSends != 1 {
+		t.Error("Expected 1 invocation of OnSends")
+	}
+	if ms.onCloses != 1 {
+		t.Error("Expected 1 invocation of OnClose")
 	}
 }
 
@@ -188,9 +240,21 @@ func TestConcurrentSend(t *testing.T) {
 		t.Error(err.Error())
 	}
 
+	time.Sleep(time.Second)
+
 	ms.connectionManager.RemoveConnection("client-1")
 	if len(ms.connectionManager.connections) != 0 {
 		t.Error("There should be no remaining connections")
+	}
+	// These tests must be performed at end to avoid race condition
+	if ms.onReceives != 1 {
+		t.Error("Expected 1 invocation of OnReceive")
+	}
+	if ms.onSends != 2 {
+		t.Error("Expected 1 invocation of OnSends")
+	}
+	if ms.onCloses != 1 {
+		t.Error("Expected 1 invocation of OnClose")
 	}
 }
 
@@ -224,6 +288,8 @@ func TestMultipleConnections(t *testing.T) {
 		t.Error(err.Error())
 	}
 
+	time.Sleep(time.Second)
+
 	ms.connectionManager.RemoveConnection("client-1")
 	if len(ms.connectionManager.connections) != 1 {
 		t.Error("There should be only one connection")
@@ -231,5 +297,15 @@ func TestMultipleConnections(t *testing.T) {
 	ms.connectionManager.RemoveConnection("client-2")
 	if len(ms.connectionManager.connections) != 0 {
 		t.Error("There should be no connections")
+	}
+	// These tests must be performed at end to avoid race condition
+	if ms.onReceives != 0 {
+		t.Error("Expected 1 invocation of OnReceive")
+	}
+	if ms.onSends != 2 {
+		t.Error("Expected 1 invocation of OnSends")
+	}
+	if ms.onCloses != 2 {
+		t.Error("Expected 1 invocation of OnClose")
 	}
 }

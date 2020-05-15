@@ -122,21 +122,21 @@ func (cm *ConnectionManager) listen(workerUUID string, c *connection) {
 		// Compressed message is read into buffer from websocket
 		_, buffer, err := c.connection.ReadMessage()
 		if err != nil {
-			// Connection has already been removed by synchronizer
+			// Prevent concurrent writes
 			c.mutex.Lock()
 			defer c.mutex.Unlock()
 
+			// If the websocket was closed by the connectionManager, subscribers have already been notified
 			if _, ok := cm.connections[workerUUID]; ok == false {
 				return
 			}
-
 			// Otherwise handle error
 			// TODO explicitly handle all possible errors
 			if ce, ok := err.(*websocket.CloseError); ok {
 				switch ce.Code {
 				case websocket.CloseAbnormalClosure:
 					cm.subscriptions.closeTopic(workerUUID)
-					fmt.Println("b" + err.Error())
+					fmt.Println(err.Error())
 					return
 				default:
 					cm.subscriptions.closeTopic(workerUUID)
@@ -146,11 +146,9 @@ func (cm *ConnectionManager) listen(workerUUID string, c *connection) {
 				}
 			} else {
 				cm.subscriptions.closeTopic(workerUUID)
-				fmt.Println("e" + err.Error())
+				fmt.Println(err.Error())
 				return
 			}
-			//fmt.Println(err.Error())
-			// TODO distinguish if the error is fatal to the connection
 		}
 		// Message is inflated
 		message, err := readMessage(buffer)
@@ -165,5 +163,3 @@ func (cm *ConnectionManager) listen(workerUUID string, c *connection) {
 		}
 	}
 }
-
-// TODO test that appropriate pubsub calls are made in connection functions
