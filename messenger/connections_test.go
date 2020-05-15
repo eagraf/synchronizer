@@ -1,8 +1,6 @@
 package messenger
 
 import (
-	"fmt"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -67,14 +65,16 @@ func (tc *TestClient) receive() (*Message, error) {
 type mockService struct {
 	connectionManager *ConnectionManager
 	server            *httptest.Server
+	t                 *testing.T
 }
 
 // Start the test server
-func startMockService() *mockService {
+func startMockService(t *testing.T) *mockService {
 	ps := newPubSub()
 	cm := newConnectionManager(ps)
 	ms := mockService{
 		connectionManager: cm,
+		t:                 t,
 	}
 
 	ms.server = httptest.NewServer(http.HandlerFunc(ms.mockWebsocketEndpoint))
@@ -91,12 +91,15 @@ var upgrader = websocket.Upgrader{
 
 // Mock websocket endpoint
 func (ms *mockService) mockWebsocketEndpoint(w http.ResponseWriter, r *http.Request) {
-	ms.connectionManager.AddConnection(r.Header.Get("clientID"), r)
+	err := ms.connectionManager.AddConnection(r.Header.Get("clientID"), w, r)
+	if err != nil {
+		ms.t.Error(err.Error())
+	}
 
 	// Temporarily promote request
-	conn, err := upgrader.Upgrade(w, r, nil)
+	/*conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println(err)
+		ms.t.Error(err.Error())
 	}
 
 	_, buffer, _ := conn.ReadMessage()
@@ -104,15 +107,15 @@ func (ms *mockService) mockWebsocketEndpoint(w http.ResponseWriter, r *http.Requ
 
 	msg, err := readMessage(buffer)
 	if err != nil {
-		fmt.Println(err.Error())
+		ms.t.Error(err.Error())
 	}
 	fmt.Println(msg.offset)
-	fmt.Println(msg.metadata.Request)
+	fmt.Println(msg.metadata.Request)*/
 }
 
 // Tests AddConnection
-func TestMockServiceHandshake(t *testing.T) {
-	ms := startMockService()
+/*func TestMockServiceHandshake(t *testing.T) {
+	ms := startMockService(t)
 	tc, err := newTestClient(ms.server.URL, "client-1")
 	if err != nil {
 		t.Error(err.Error())
@@ -125,10 +128,10 @@ func TestMockServiceHandshake(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-}
+}*/
 
 func TestMessaging(t *testing.T) {
-	ms := startMockService()
+	ms := startMockService(t)
 	tc, err := newTestClient(ms.server.URL, "client-1")
 	if err != nil {
 		t.Error(err.Error())
@@ -162,8 +165,48 @@ func TestMessaging(t *testing.T) {
 	}
 }
 
+func TestConcurrentSend(t *testing.T) {
+	ms := startMockService(t)
+	tc, err := newTestClient(ms.server.URL, "client-1")
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	if len(ms.connectionManager.connections) != 1 {
+		t.Error("There should be one connection")
+	}
+
+	// Construct message
+	mb := MessageBuilder{}
+	m, _ := mb.NewMessage("test-message", "request-id").Done()
+
+	// Test sending from sychronizer to the testClient
+	ms.connectionManager.Send("client-1", m)
+	ms.connectionManager.Send("client-1", m)
+	_, err = tc.receive()
+	if err != nil {
+		t.Error(err.Error())
+	}
+	_, err = tc.receive()
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	// testClient sends response
+	m2, _ := mb.NewMessage("response-message", "request-id").Done()
+	err = tc.send(m2)
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	ms.connectionManager.RemoveConnection("client-1")
+	if len(ms.connectionManager.connections) != 0 {
+		t.Error("There should be no remaining connections")
+	}
+}
+
 func TestMultipleConnections(t *testing.T) {
-	ms := startMockService()
+	ms := startMockService(t)
 	tc1, err := newTestClient(ms.server.URL, "client-1")
 	if err != nil {
 		t.Error(err.Error())
