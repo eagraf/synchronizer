@@ -66,7 +66,7 @@ func (ps *PubSub) closeTopic(topic string) {
 // Notify all relevant subscribers about a message received
 func (ps *PubSub) publishReceived(topic string, message *Message) error {
 	if _, ok := ps.subs[topic]; ok == false {
-		return errors.New("Topic does not exist")
+		return errors.New("Topic does not exist: " + topic)
 	}
 
 	for _, sub := range ps.subs[topic] {
@@ -78,7 +78,7 @@ func (ps *PubSub) publishReceived(topic string, message *Message) error {
 // Notify all relevant subscribers about a message sent
 func (ps *PubSub) publishSend(topic string, message *Message) error {
 	if _, ok := ps.subs[topic]; ok == false {
-		return errors.New("Topic does not exist")
+		return errors.New("Topic does not exist: " + topic)
 	}
 
 	for _, sub := range ps.subs[topic] {

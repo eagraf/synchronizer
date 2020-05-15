@@ -98,7 +98,6 @@ func readMessage(buffer []byte) (*Message, error) {
 	// Get metadata
 	var metadata *Metadata
 	err = json.Unmarshal(inflated[4:offset], &metadata)
-	fmt.Println(string(inflated[4:offset]))
 	if err != nil {
 		fmt.Println("hey!" + err.Error())
 		return nil, err
