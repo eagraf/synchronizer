@@ -95,26 +95,10 @@ func (ms *mockService) mockWebsocketEndpoint(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		ms.t.Error(err.Error())
 	}
-
-	// Temporarily promote request
-	/*conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		ms.t.Error(err.Error())
-	}
-
-	_, buffer, _ := conn.ReadMessage()
-	fmt.Println(string(buffer))
-
-	msg, err := readMessage(buffer)
-	if err != nil {
-		ms.t.Error(err.Error())
-	}
-	fmt.Println(msg.offset)
-	fmt.Println(msg.metadata.Request)*/
 }
 
 // Tests AddConnection
-/*func TestMockServiceHandshake(t *testing.T) {
+func TestMockServiceHandshake(t *testing.T) {
 	ms := startMockService(t)
 	tc, err := newTestClient(ms.server.URL, "client-1")
 	if err != nil {
@@ -128,7 +112,12 @@ func (ms *mockService) mockWebsocketEndpoint(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		t.Error(err.Error())
 	}
-}*/
+
+	ms.connectionManager.RemoveConnection("client-1")
+	if len(ms.connectionManager.connections) != 0 {
+		t.Error("There should be no remaining connections")
+	}
+}
 
 func TestMessaging(t *testing.T) {
 	ms := startMockService(t)
