@@ -1,10 +1,6 @@
 package messenger
 
 import (
-	"bytes"
-	"compress/zlib"
-	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,20 +8,22 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
+// TestClient represents the worker end of the websocket connection
 // Test websocket client
 type TestClient struct {
 	conn *websocket.Conn
 }
 
-func newTestClient(URL string) (*TestClient, error) {
+// Connect via websocket to mock service
+func newTestClient(URL string, clientID string) (*TestClient, error) {
 	var dialer websocket.Dialer
 	parsedURL, _ := url.Parse(URL)
-	fmt.Println("ws://" + parsedURL.Host)
-	connection, _, err := dialer.Dial("ws://"+parsedURL.Host+"/", make(http.Header))
+	header := make(http.Header)
+	header.Add("clientID", clientID)
+	connection, _, err := dialer.Dial("ws://"+parsedURL.Host+"/", header)
 	if err != nil {
 		return nil, err
 	}
@@ -36,57 +34,42 @@ func newTestClient(URL string) (*TestClient, error) {
 	return &tc, nil
 }
 
+// Send message to mock service
 func (tc *TestClient) send(message *Message) error {
 	w, err := tc.conn.NextWriter(websocket.BinaryMessage)
 	if err != nil {
 		return err
 	}
 
-	zw := zlib.NewWriter(w)
-
-	// Write offset
-	offset := make([]byte, 4)
-	binary.LittleEndian.PutUint32(offset, uint32(message.offset))
-	zw.Write(offset)
-
-	// Write metadata
-	marshalled, err := json.Marshal(message.metadata)
-	if err != nil {
-		return err
-	}
-
-	zw.Write(marshalled)
-
-	// Write payload
-	if message.metadata.HasPayload {
-		zw.Write(message.payload)
-	}
-	err = zw.Close()
-	if err != nil {
-		return err
-	}
-	err = w.Close()
+	// Send the message
+	err = writeMessage(message, w)
+	w.Close()
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-/*func (tc *TestClient) receive() (*Message, error) {
-
+// Receive a message from the mock service
+func (tc *TestClient) receive() (*Message, error) {
 	_, buffer, err := tc.conn.ReadMessage()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	message := FromBuffer(buffer)
+	message, err := readMessage(buffer)
+	if err != nil {
+		return nil, err
+	}
 	return message, nil
-}*/
+}
 
+// mockService provides an HTTP endpoint for initiating test websocket connections
 type mockService struct {
 	connectionManager *ConnectionManager
 	server            *httptest.Server
 }
 
+// Start the test server
 func startMockService() *mockService {
 	ps := newPubSub()
 	cm := newConnectionManager(ps)
@@ -108,7 +91,7 @@ var upgrader = websocket.Upgrader{
 
 // Mock websocket endpoint
 func (ms *mockService) mockWebsocketEndpoint(w http.ResponseWriter, r *http.Request) {
-	ms.connectionManager.AddConnection(uuid.New().String(), r)
+	ms.connectionManager.AddConnection(r.Header.Get("clientID"), r)
 
 	// Temporarily promote request
 	conn, err := upgrader.Upgrade(w, r, nil)
@@ -116,25 +99,21 @@ func (ms *mockService) mockWebsocketEndpoint(w http.ResponseWriter, r *http.Requ
 		log.Println(err)
 	}
 
-	_, msg, _ := conn.ReadMessage()
-	fmt.Println(string(msg))
+	_, buffer, _ := conn.ReadMessage()
+	fmt.Println(string(buffer))
 
-	zr, err := zlib.NewReader(bytes.NewReader(msg))
+	msg, err := readMessage(buffer)
 	if err != nil {
-		fmt.Println("Failed to decompress: " + err.Error())
+		fmt.Println(err.Error())
 	}
-	// Read into byte array
-	inflated := new(bytes.Buffer)
-	_, err = inflated.ReadFrom(zr)
-	if err != nil {
-		fmt.Println("Failed to decompress: " + err.Error())
-	}
-	fmt.Println(string(inflated.Bytes()))
+	fmt.Println(msg.offset)
+	fmt.Println(msg.metadata.Request)
 }
 
+// Tests AddConnection
 func TestMockServiceHandshake(t *testing.T) {
 	ms := startMockService()
-	tc, err := newTestClient(ms.server.URL)
+	tc, err := newTestClient(ms.server.URL, "client-1")
 	if err != nil {
 		t.Error(err.Error())
 	}
