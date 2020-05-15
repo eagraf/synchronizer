@@ -126,3 +126,78 @@ func TestMockServiceHandshake(t *testing.T) {
 		t.Error(err.Error())
 	}
 }
+
+func TestMessaging(t *testing.T) {
+	ms := startMockService()
+	tc, err := newTestClient(ms.server.URL, "client-1")
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	if len(ms.connectionManager.connections) != 1 {
+		t.Error("There should be one connection")
+	}
+
+	// Construct message
+	mb := MessageBuilder{}
+	m, _ := mb.NewMessage("test-message", "request-id").Done()
+
+	// Test sending from sychronizer to the testClient
+	ms.connectionManager.Send("client-1", m)
+	_, err = tc.receive()
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	// testClient sends response
+	m2, _ := mb.NewMessage("response-message", "request-id").Done()
+	err = tc.send(m2)
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	ms.connectionManager.RemoveConnection("client-1")
+	if len(ms.connectionManager.connections) != 0 {
+		t.Error("There should be no remaining connections")
+	}
+}
+
+func TestMultipleConnections(t *testing.T) {
+	ms := startMockService()
+	tc1, err := newTestClient(ms.server.URL, "client-1")
+	if err != nil {
+		t.Error(err.Error())
+	}
+	tc2, err := newTestClient(ms.server.URL, "client-2")
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	if len(ms.connectionManager.connections) != 2 {
+		t.Error("There should be two connections")
+	}
+
+	// Construct message
+	mb := MessageBuilder{}
+	m, _ := mb.NewMessage("test-message", "request-id").Done()
+
+	ms.connectionManager.Send("client-1", m)
+	_, err = tc1.receive()
+	if err != nil {
+		t.Error(err.Error())
+	}
+	ms.connectionManager.Send("client-2", m)
+	_, err = tc2.receive()
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	ms.connectionManager.RemoveConnection("client-1")
+	if len(ms.connectionManager.connections) != 1 {
+		t.Error("There should be only one connection")
+	}
+	ms.connectionManager.RemoveConnection("client-2")
+	if len(ms.connectionManager.connections) != 0 {
+		t.Error("There should be no connections")
+	}
+}
