@@ -9,11 +9,11 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// ConnectionManager maintains all connections for this server
+// connectionManager maintains all connections for this server
 // TODO determine whether this should be publicly accessible
-type ConnectionManager struct {
+type connectionManager struct {
 	connections   map[string]*connection
-	subscriptions *PubSub
+	subscriptions *pubSub
 }
 
 type connection struct {
@@ -22,8 +22,8 @@ type connection struct {
 }
 
 // Create new connectionManager
-func newConnectionManager(ps *PubSub) *ConnectionManager {
-	cm := ConnectionManager{
+func newConnectionManager(ps *pubSub) *connectionManager {
+	cm := connectionManager{
 		connections:   make(map[string]*connection),
 		subscriptions: ps,
 	}
@@ -31,7 +31,7 @@ func newConnectionManager(ps *PubSub) *ConnectionManager {
 }
 
 // AddConnection inserts the given connection, and begins listening for messages in a new goroutine
-func (cm *ConnectionManager) AddConnection(workerUUID string, writer http.ResponseWriter, request *http.Request) error {
+func (cm *connectionManager) AddConnection(workerUUID string, writer http.ResponseWriter, request *http.Request) error {
 	// Promote request to connection
 	// upgrader promotes a standard HTTP/HTTPS connection to a websocket connection
 	// TODO implement CheckOrigin
@@ -64,7 +64,7 @@ func (cm *ConnectionManager) AddConnection(workerUUID string, writer http.Respon
 }
 
 // RemoveConnection severs a websocket connection, and notifies all relevant listeners
-func (cm *ConnectionManager) RemoveConnection(workerUUID string) {
+func (cm *connectionManager) RemoveConnection(workerUUID string) {
 	if _, ok := cm.connections[workerUUID]; ok == true {
 		// Must be able to acquire a lock before deleting
 		// TODO check this doesn't cause a race condition if message was sent right beforehand. This could occur if there is a context switch from Send to RemoveConnection before Send acquires lock
@@ -82,7 +82,7 @@ func (cm *ConnectionManager) RemoveConnection(workerUUID string) {
 // This method cannot return an error without causing a wait.
 // TODO error logging
 // TODO recovery from failed sends
-func (cm *ConnectionManager) Send(workerUUID string, message *Message) {
+func (cm *connectionManager) Send(workerUUID string, message *Message) {
 	if _, ok := cm.connections[workerUUID]; ok == false {
 		fmt.Println(errors.New("No connection with that UUID exists"))
 	}
@@ -116,7 +116,7 @@ func (cm *ConnectionManager) Send(workerUUID string, message *Message) {
 }
 
 // Main listening loop
-func (cm *ConnectionManager) listen(workerUUID string, c *connection) {
+func (cm *connectionManager) listen(workerUUID string, c *connection) {
 
 	for {
 		// Compressed message is read into buffer from websocket

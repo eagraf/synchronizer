@@ -65,7 +65,7 @@ func (tc *TestClient) receive() (*Message, error) {
 
 // mockService provides an HTTP endpoint for initiating test websocket connections
 type mockService struct {
-	connectionManager *ConnectionManager
+	connectionManager *connectionManager
 	server            *httptest.Server
 	t                 *testing.T
 	onReceives        int
