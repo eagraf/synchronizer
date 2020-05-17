@@ -1,222 +1,54 @@
 package messenger
 
-import (
-	"bytes"
-	"compress/zlib"
-	"encoding/json"
-	"fmt"
-	"reflect"
-	"sync"
-	"time"
+import "net/http"
 
-	"github.com/gorilla/websocket"
-)
+/*
+ * Reusable package for maintaining websocket connections in go services
+ * Features:
+ * 	(1) Extendible message type with a header for structured data, and payload section for raw data that needs quick copying
+ *  (2) Pubsub system that allows for different modules to subscribe to connections and listen for messages
+ *  (3) Connection management with message loss detection (TODO)
+ *  (4) Message and request logging (TODO)
+ */
 
+/*
+ * Exported types from this package
+ * 	(1) Messenger
+ * 	(2) Subscriber struct
+ * 	(4) Message and related types
+ * 	(3) MessageBuilder
+ */
+
+// Messenger type is a wrapper for ConnectionManager, PubSub, and more
 type Messenger struct {
-	connections    map[string]*Connection
-	subscriptions  map[string]map[string]*Subscriber
-	activeRequests map[string]Request
+	cm *connectionManager
+	ps *pubSub
 }
 
-type Message struct {
-	MessageType string
-	Payload     interface{}
-}
-
-type Connection struct {
-	connection *websocket.Conn
-	mutex      sync.Mutex
-}
-
-type Subscriber interface {
-	AddSubscription(topic string)
-	GetUUID() string
-	OnReceive(topic string, m *map[string]interface{})
-	OnSend(topic string)
-	OnClose(string)
-}
-
-type Request struct {
-	outerStart int64
-	outerEnd   int64
-	start      int64
-	end        int64
-}
-
-var messenger *Messenger
-
-// InitializeMessenger creates the messenger singleton
-func InitializeMessenger() *Messenger {
-	if messenger != nil {
-		panic("Messenger already initialized")
-	}
+// NewMessenger initializes a new messenger instance
+func NewMessenger() *Messenger {
+	ps := newPubSub()
+	cm := newConnectionManager(ps)
 	m := Messenger{
-		connections:    make(map[string]*Connection),
-		subscriptions:  make(map[string]map[string]*Subscriber), // Each topic is a set of subscribers
-		activeRequests: make(map[string]Request),
+		cm,
+		ps,
 	}
-	messenger = &m
-	return messenger
+	return &m
 }
 
-// GetMessengerSingleton returns the messenger
-func GetMessengerSingleton() *Messenger {
-	if messenger == nil {
-		panic("Messenger has not been initialized yet")
-	}
-	return messenger
+// connectionManager wrappers
+
+// AddConnection is a wrapper method for connectionManager.AddConnection
+func (m *Messenger) AddConnection(workerUUID string, writer http.ResponseWriter, request *http.Request) error {
+	return m.cm.AddConnection(workerUUID, writer, request)
 }
 
-// AddConnection registers a connection with the messenger and begins listening on a new thread
-func (m *Messenger) AddConnection(workerUUID string, connection *websocket.Conn) {
-	c := Connection{
-		connection,
-		sync.Mutex{},
-	}
-	m.connections[workerUUID] = &c
-	go m.listen(workerUUID, &c)
-}
-
-// RemoveConnection stops listening on a connection
+// RemoveConnection is a wrapper method for connectionManager.RemoveConnection
 func (m *Messenger) RemoveConnection(workerUUID string) {
-	// Delete connection
-	delete(m.connections, workerUUID)
-
-	// Notify any listeners
-	if _, ok := m.subscriptions[workerUUID]; ok == true {
-		for _, subscriber := range m.subscriptions[workerUUID] {
-			(*subscriber).OnClose(workerUUID)
-		}
-	}
-
-	// Delete topic
-	delete(m.subscriptions, workerUUID)
+	m.cm.RemoveConnection(workerUUID)
 }
 
-// AddSubscriber subscribes any subscriber interface to a topic
-func (m *Messenger) AddSubscriber(subscriber Subscriber, topics []string) {
-	for _, topic := range topics {
-		// Check if topic exists
-		if _, ok := m.subscriptions[topic]; ok == false {
-			// If not make topic
-			m.subscriptions[topic] = make(map[string]*Subscriber)
-		}
-		// Check if already subscribed
-		if _, ok := m.subscriptions[topic][subscriber.GetUUID()]; ok == false {
-			m.subscriptions[topic][subscriber.GetUUID()] = &subscriber
-			subscriber.AddSubscription(topic)
-		}
-	}
-}
-
-// RemoveSubscriber unsubscribes a listener
-func (m *Messenger) RemoveSubscriber(subscriber Subscriber, topic string) {
-	if _, ok := m.subscriptions[topic][subscriber.GetUUID()]; ok == true {
-		delete(m.subscriptions[topic], subscriber.GetUUID())
-	}
-}
-
-// SendMessage sends a message to a worker in a separate thread
-// TODO add some sort of error handling
-// TODO account for concurrent write to websocket connection error
-func (m *Messenger) SendMessage(workerUUID string, payload interface{}) {
-	go func() {
-		messageType := reflect.TypeOf(payload).Elem().Name()
-		// Construct the message
-		message := Message{
-			MessageType: messageType,
-			Payload:     payload,
-		}
-
-		// Encode message as json
-		buffer, err := json.Marshal(message)
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-
-		// Compress message
-		var deflated bytes.Buffer
-		zw := zlib.NewWriter(&deflated)
-		zw.Write(buffer)
-		zw.Close()
-
-		// Add to request queue
-		if messageType == "Intent" {
-			r := Request{
-				outerStart: time.Now().UnixNano() / int64(time.Millisecond),
-				outerEnd:   0,
-			}
-			m.activeRequests[workerUUID] = r
-		}
-
-		// Notify all subscribers of send
-		for _, subscriber := range m.subscriptions[workerUUID] {
-			(*subscriber).OnSend(workerUUID)
-		}
-
-		fmt.Println(string(deflated.Bytes()))
-		// Send the message over websocket
-		m.connections[workerUUID].mutex.Lock()
-		err = m.connections[workerUUID].connection.WriteMessage(websocket.BinaryMessage, deflated.Bytes())
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-		m.connections[workerUUID].mutex.Unlock()
-	}()
-}
-
-// Listening thread for
-func (m *Messenger) listen(workerUUID string, c *Connection) {
-	for {
-		// Read incoming message
-		_, buffer, err := c.connection.ReadMessage()
-		// TODO check if error involves channel being closed
-		if err != nil {
-			fmt.Println("Removing connection:" + err.Error())
-			m.RemoveConnection(workerUUID)
-			return
-		}
-
-		// Decompress message
-		zr, err := zlib.NewReader(bytes.NewReader(buffer))
-		if err != nil {
-			fmt.Println("Failed to decompress: " + err.Error())
-			continue
-		}
-		// Read into byte array
-		inflated := new(bytes.Buffer)
-		_, err = inflated.ReadFrom(zr)
-		if err != nil {
-			fmt.Println("Failed to decompress: " + err.Error())
-			continue
-		}
-
-		// TODO get rid of this
-		if string(buffer) == "hello" {
-			fmt.Println("continuing")
-			continue
-		}
-
-		// Unmarshal the message
-		var message map[string]interface{}
-		err = json.Unmarshal(inflated.Bytes(), &message)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-
-		if s, ok := m.activeRequests[workerUUID]; ok != false {
-			s.outerEnd = time.Now().UnixNano() / int64(time.Millisecond)
-			message["outer_start"] = s.outerStart
-			message["outer_end"] = s.outerEnd
-		}
-		// Why does everything suck
-		delete(m.activeRequests, workerUUID)
-
-		// Notify all subscribers
-		// Use workerUUID as a topic for now
-		for _, subscriber := range m.subscriptions[workerUUID] {
-			(*subscriber).OnReceive(workerUUID, &message)
-		}
-	}
+// Send is a wrapper method for connectionManager.Send
+func (m *Messenger) Send(workerUUID string, message *Message) {
+	m.cm.Send(workerUUID, message)
 }
