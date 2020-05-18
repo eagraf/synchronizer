@@ -4,64 +4,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"testing"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
-
-// TestClient represents the worker end of the websocket connection
-// Test websocket client
-type TestClient struct {
-	conn *websocket.Conn
-}
-
-// Connect via websocket to mock service
-func newTestClient(URL string, clientID string) (*TestClient, error) {
-	var dialer websocket.Dialer
-	parsedURL, _ := url.Parse(URL)
-	header := make(http.Header)
-	header.Add("clientID", clientID)
-	connection, _, err := dialer.Dial("ws://"+parsedURL.Host+"/", header)
-	if err != nil {
-		return nil, err
-	}
-
-	tc := TestClient{
-		conn: connection,
-	}
-	return &tc, nil
-}
-
-// Send message to mock service
-func (tc *TestClient) send(message *Message) error {
-	w, err := tc.conn.NextWriter(websocket.BinaryMessage)
-	if err != nil {
-		return err
-	}
-
-	// Send the message
-	err = writeMessage(message, w)
-	w.Close()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// Receive a message from the mock service
-func (tc *TestClient) receive() (*Message, error) {
-	_, buffer, err := tc.conn.ReadMessage()
-	if err != nil {
-		return nil, err
-	}
-	message, err := readMessage(buffer)
-	if err != nil {
-		return nil, err
-	}
-	return message, nil
-}
 
 // mockService provides an HTTP endpoint for initiating test websocket connections
 type mockService struct {
@@ -128,7 +75,7 @@ func (ms *mockService) OnClose(topic string) {
 // Tests AddConnection
 func TestMockServiceHandshake(t *testing.T) {
 	ms := startMockService(t)
-	tc, err := newTestClient(ms.server.URL, "client-1")
+	tc, err := NewTestClient(ms.server.URL, "client-1")
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -136,7 +83,7 @@ func TestMockServiceHandshake(t *testing.T) {
 	// Test sending
 	mb := MessageBuilder{}
 	m, _ := mb.NewMessage("test-message", "test-request").Done()
-	err = tc.send(m)
+	err = tc.Send(m)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -161,7 +108,7 @@ func TestMockServiceHandshake(t *testing.T) {
 
 func TestMessaging(t *testing.T) {
 	ms := startMockService(t)
-	tc, err := newTestClient(ms.server.URL, "client-1")
+	tc, err := NewTestClient(ms.server.URL, "client-1")
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -176,14 +123,14 @@ func TestMessaging(t *testing.T) {
 
 	// Test sending from sychronizer to the testClient
 	ms.connectionManager.Send("client-1", m)
-	_, err = tc.receive()
+	_, err = tc.Receive()
 	if err != nil {
 		t.Error(err.Error())
 	}
 
 	// testClient sends response
 	m2, _ := mb.NewMessage("response-message", "request-id").Done()
-	err = tc.send(m2)
+	err = tc.Send(m2)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -208,7 +155,7 @@ func TestMessaging(t *testing.T) {
 
 func TestConcurrentSend(t *testing.T) {
 	ms := startMockService(t)
-	tc, err := newTestClient(ms.server.URL, "client-1")
+	tc, err := NewTestClient(ms.server.URL, "client-1")
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -224,18 +171,18 @@ func TestConcurrentSend(t *testing.T) {
 	// Test sending from sychronizer to the testClient
 	ms.connectionManager.Send("client-1", m)
 	ms.connectionManager.Send("client-1", m)
-	_, err = tc.receive()
+	_, err = tc.Receive()
 	if err != nil {
 		t.Error(err.Error())
 	}
-	_, err = tc.receive()
+	_, err = tc.Receive()
 	if err != nil {
 		t.Error(err.Error())
 	}
 
 	// testClient sends response
 	m2, _ := mb.NewMessage("response-message", "request-id").Done()
-	err = tc.send(m2)
+	err = tc.Send(m2)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -260,11 +207,11 @@ func TestConcurrentSend(t *testing.T) {
 
 func TestMultipleConnections(t *testing.T) {
 	ms := startMockService(t)
-	tc1, err := newTestClient(ms.server.URL, "client-1")
+	tc1, err := NewTestClient(ms.server.URL, "client-1")
 	if err != nil {
 		t.Error(err.Error())
 	}
-	tc2, err := newTestClient(ms.server.URL, "client-2")
+	tc2, err := NewTestClient(ms.server.URL, "client-2")
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -278,12 +225,12 @@ func TestMultipleConnections(t *testing.T) {
 	m, _ := mb.NewMessage("test-message", "request-id").Done()
 
 	ms.connectionManager.Send("client-1", m)
-	_, err = tc1.receive()
+	_, err = tc1.Receive()
 	if err != nil {
 		t.Error(err.Error())
 	}
 	ms.connectionManager.Send("client-2", m)
-	_, err = tc2.receive()
+	_, err = tc2.Receive()
 	if err != nil {
 		t.Error(err.Error())
 	}

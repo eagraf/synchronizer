@@ -15,8 +15,9 @@ import "net/http"
  * Exported types from this package
  * 	(1) Messenger
  * 	(2) Subscriber struct
- * 	(4) Message and related types
- * 	(3) MessageBuilder
+ * 	(3) Message and related types
+ * 	(4) MessageBuilder
+ *  (5) TestClient
  */
 
 // Messenger type is a wrapper for ConnectionManager, PubSub, and more
