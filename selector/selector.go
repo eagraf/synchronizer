@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"net/rpc"
+	"strconv"
 
 	"github.com/go-chi/chi"
 )
@@ -37,7 +38,7 @@ func newSelector(apiPort int, rpcPort int) (*selector, error) {
 
 	// Start api
 	routes := registerRoutes(s)
-	listener, err := net.Listen("tcp", ":"+string(apiPort))
+	listener, err := net.Listen("tcp", ":"+strconv.Itoa(apiPort))
 	if err != nil {
 		log.Fatal("listen error (api):", err)
 		return nil, err
@@ -47,7 +48,7 @@ func newSelector(apiPort int, rpcPort int) (*selector, error) {
 	// Start rpc
 	rpc.Register(s)
 	rpc.HandleHTTP()
-	listener, err := net.Listen("tcp", ":"+string(rpcPort))
+	listener, err = net.Listen("tcp", ":"+strconv.Itoa(rpcPort))
 	if err != nil {
 		log.Fatal("listen error (rpc):", err)
 		return nil, err
