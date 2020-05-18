@@ -59,3 +59,8 @@ func (tc *TestClient) Receive() (*Message, error) {
 	}
 	return message, nil
 }
+
+// Close websocket
+func (tc *TestClient) Close() error {
+	return tc.conn.Close()
+}
