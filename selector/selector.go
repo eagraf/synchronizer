@@ -9,6 +9,7 @@ import (
 
 	"github.com/eagraf/synchronizer/messenger"
 	"github.com/go-chi/chi"
+	"github.com/google/uuid"
 )
 
 const (
@@ -21,7 +22,8 @@ const (
 )
 
 type Selector struct {
-	workers []Worker // Don't use a list of pointers so that workers can be easilly encoded
+	workers   []Worker // Don't use a list of pointers so that workers can be easilly encoded
+	messenger *messenger.Messenger
 }
 
 type Worker struct {
@@ -47,6 +49,8 @@ type HandoffResponse struct {
 func newSelector(apiPort int, rpcPort int) (*Selector, error) {
 	// Initialize selector
 	var s *Selector = new(Selector)
+	m := messenger.NewMessenger()
+	s.messenger = m
 
 	// Start api
 	routes := registerRoutes(s)
@@ -83,6 +87,31 @@ func registerRoutes(s *Selector) http.Handler {
 
 // HTTP endpoint that promotes an HTTP request to a full WebSocket connection
 func (s *Selector) websocket(w http.ResponseWriter, r *http.Request) {
+	if id := r.Header.Get("clientID"); id == "" {
+		http.Error(w, "Missing clientID header.", 400)
+		return
+	}
+	err := s.messenger.AddConnection(r.Header.Get("clientID"), w, r)
+	if err != nil {
+		http.Error(w, "Failed to add connection: "+err.Error(), 500)
+		return
+	}
+	// Otherwise, websocket connection is managed by messenger
+	// TODO should there be a return?
+
+	// Send registration message with session id
+	mb := new(messenger.MessageBuilder)
+	m, err := mb.NewMessage(MessageRegistrationResponse, uuid.New().String()).
+		AddHeader("session_id", uuid.New().String()).
+		Done()
+
+	if err != nil {
+		http.Error(w, "Failed to add connection: "+err.Error(), 500)
+		return
+	}
+
+	// Send registration response
+	s.messenger.Send(r.Header.Get("clientID"), m)
 }
 
 // RPC interface
@@ -120,8 +149,14 @@ func (s *Selector) sendRegistrationResponse() {
 
 }
 
-func (s *Selector) sendHealthCheck() {
-
+func (s *Selector) sendHealthCheck(workerUUID string) error {
+	mb := new(messenger.MessageBuilder)
+	m, err := mb.NewMessage(MessageHealthCheck, uuid.New().String()).Done()
+	if err != nil {
+		return err
+	}
+	s.messenger.Send(workerUUID, m)
+	return nil
 }
 
 func (s *Selector) sendHandoff() {

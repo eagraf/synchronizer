@@ -46,12 +46,9 @@ func TestNewSelector(t *testing.T) {
 }
 
 func TestWorkerRegistration(t *testing.T) {
-	tc, _ := messenger.NewTestClient("http://localhost:3000/websocket/", "test-client-id")
-
-	// Receive response on client
-	_, err := tc.Receive()
+	tc, err := messenger.NewTestClient("http://localhost:3000/websocket/", "test-client-id")
 	if err != nil {
-		t.Error("Error receiving response from selector: " + err.Error())
+		t.Error("Failed to establish websocket connection: " + err.Error())
 	}
 
 	// Receive connection response
@@ -75,20 +72,14 @@ func TestWorkerRegistration(t *testing.T) {
 func TestHealthCheck(t *testing.T) {
 	tc, _ := messenger.NewTestClient("http://localhost:3000/websocket/", "test-client-id")
 
-	// Receive response on client
-	_, err := tc.Receive()
-	if err != nil {
-		t.Error("Error receiving response from selector: " + err.Error())
-	}
-
 	// Receive connection response
-	_, err = tc.Receive()
+	_, err := tc.Receive()
 	if err != nil {
 		t.Error("Error recieved instead of registration response: " + err.Error())
 	}
 
 	// Send healthcheck
-	globalSelector.sendHealthCheck()
+	globalSelector.sendHealthCheck("test-client-id")
 	hc, err := tc.Receive()
 	if err != nil {
 		t.Error("Error recieved instead of registration response: " + err.Error())
@@ -114,20 +105,14 @@ func TestHealthCheck(t *testing.T) {
 func TestHealthCheckTimeout(t *testing.T) {
 	tc, _ := messenger.NewTestClient("http://localhost:3000/websocket/", "test-client-id")
 
-	// Receive response on client
-	_, err := tc.Receive()
-	if err != nil {
-		t.Error("Error receiving response from selector: " + err.Error())
-	}
-
 	// Receive connection response
-	_, err = tc.Receive()
+	_, err := tc.Receive()
 	if err != nil {
 		t.Error("Error recieved instead of registration response: " + err.Error())
 	}
 
 	// Send healthcheck
-	globalSelector.sendHealthCheck()
+	globalSelector.sendHealthCheck("test-client-id")
 	hc, err := tc.Receive()
 	if err != nil {
 		t.Error("Error recieved instead of registration response: " + err.Error())
@@ -147,14 +132,8 @@ func TestHealthCheckTimeout(t *testing.T) {
 func TestWorkerDisconnect(t *testing.T) {
 	tc, _ := messenger.NewTestClient("http://localhost:3000/websocket/", "test-client-id")
 
-	// Receive response on client
-	_, err := tc.Receive()
-	if err != nil {
-		t.Error("Error receiving response from selector: " + err.Error())
-	}
-
 	// Receive connection response
-	_, err = tc.Receive()
+	_, err := tc.Receive()
 	if err != nil {
 		t.Error("Error recieved instead of registration response: " + err.Error())
 	}
