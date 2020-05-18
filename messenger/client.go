@@ -20,7 +20,7 @@ func NewTestClient(URL string, clientID string) (*TestClient, error) {
 	parsedURL, _ := url.Parse(URL)
 	header := make(http.Header)
 	header.Add("clientID", clientID)
-	connection, _, err := dialer.Dial("ws://"+parsedURL.Host+"/", header)
+	connection, _, err := dialer.Dial("ws://"+parsedURL.Host+parsedURL.EscapedPath(), header)
 	if err != nil {
 		return nil, err
 	}
