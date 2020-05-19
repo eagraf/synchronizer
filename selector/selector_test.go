@@ -1,6 +1,7 @@
 package selector
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"testing"
@@ -143,14 +144,16 @@ func TestWorkerDisconnect(t *testing.T) {
 	if err != nil {
 		t.Error("Error recieved instead of registration response: " + err.Error())
 	}
-
+	fmt.Println("hello")
 	err = tc.Close()
+	time.Sleep(time.Second) // Given some delay
 	if err != nil {
 		t.Error("Error closing client: " + err.Error())
 	}
 
 	// Check worker status in selector
 	worker, _ := globalSelector.getWorker("test-client-id")
+	fmt.Println(worker)
 	if worker.Disconnected == false {
 		t.Error("Worker is not disconnected")
 	}
@@ -170,6 +173,7 @@ func TestRPCGetWorkers(t *testing.T) {
 		t.Error("RPC failed: " + err.Error())
 	}
 
+	fmt.Println(res.workers)
 	if len(res.workers) < 3 {
 		t.Error("Incorrect number of workers")
 	}

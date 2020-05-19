@@ -1,6 +1,7 @@
 package selector
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -25,7 +26,7 @@ const (
 )
 
 type Selector struct {
-	workers   map[string]*Worker
+	workers   map[string]*Worker // TODO maybe use a sorted tree based structure -> when workers are transferred to coordinator, coord. just has to merge workers together from each selector
 	messenger *messenger.Messenger
 }
 
@@ -112,6 +113,9 @@ func (s *Selector) websocket(w http.ResponseWriter, r *http.Request) {
 	}
 	s.workers[worker.UUID] = worker
 
+	// Subscribe to worker topic
+	s.messenger.AddSubscription(worker.UUID, s)
+
 	// Send registration message with session id
 	mb := new(messenger.MessageBuilder)
 	m, err := mb.NewMessage(MessageRegistrationResponse, uuid.New().String()).
@@ -127,8 +131,14 @@ func (s *Selector) websocket(w http.ResponseWriter, r *http.Request) {
 	s.messenger.Send(r.Header.Get("clientID"), m)
 }
 
-// RPC interface
+// GetWorkers RPC interface
 func (s *Selector) GetWorkers(request WorkerRequest, reply *WorkerResponse) error {
+	// Convert to slice
+	res := make([]Worker, 0, len(s.workers))
+	for _, w := range s.workers {
+		res = append(res, *w)
+	}
+	reply.workers = res
 	return nil
 }
 
@@ -136,8 +146,8 @@ func (s *Selector) Handoff(request HandoffRequest, reply *HandoffRequest) error 
 	return nil
 }
 
-func (s *Selector) GetIdentifier() {
-
+func (s *Selector) GetIdentifier() string {
+	return "selector" // Temporary must fix TODO
 }
 
 func (s *Selector) OnReceive(topic string, message *messenger.Message) {
@@ -157,7 +167,9 @@ func (s *Selector) OnSend(topic string, message *messenger.Message) {
 }
 
 func (s *Selector) OnClose(topic string) {
-
+	fmt.Println(topic)
+	s.workers[topic].Disconnected = true
+	fmt.Println(s.workers[topic])
 }
 
 func (s *Selector) sendRegistrationResponse() {
