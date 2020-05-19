@@ -50,7 +50,7 @@ func (ms *mockService) mockWebsocketEndpoint(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		ms.t.Error(err.Error())
 	}
-	err = ms.connectionManager.subscriptions.AddSubscription(r.Header.Get("clientID"), ms)
+	err = ms.connectionManager.subscriptions.addSubscription(r.Header.Get("clientID"), ms)
 	if err != nil {
 		ms.t.Error(err.Error())
 	}
