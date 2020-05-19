@@ -8,7 +8,7 @@ func TestStartRoundtrip(t *testing.T) {
 
 	ps.addTopic("new-topic")
 
-	ps.AddSubscription("new-topic", l)
+	ps.addSubscription("new-topic", l)
 
 	mb := MessageBuilder{}
 	m, _ := mb.NewMessage("new-message", "request-id").Done()
@@ -50,7 +50,7 @@ func TestEndRoundtrip(t *testing.T) {
 
 	ps.addTopic("new-topic")
 
-	ps.AddSubscription("new-topic", l)
+	ps.addSubscription("new-topic", l)
 
 	mb := MessageBuilder{}
 	m, _ := mb.NewMessage("new-message", "request-id").Done()

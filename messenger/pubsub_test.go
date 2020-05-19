@@ -74,21 +74,21 @@ func TestAddRemoveSubscription(t *testing.T) {
 
 	s1 := subscriberImpl{"a"}
 	s2 := subscriberImpl{"b"}
-	ps.AddSubscription("new-topic", &s1)
+	ps.addSubscription("new-topic", &s1)
 	if len(ps.subs["new-topic"]) != 1 {
 		t.Error("Wrong number of subscribers")
 	}
 
-	ps.AddSubscription("new-topic", &s2)
+	ps.addSubscription("new-topic", &s2)
 	if len(ps.subs["new-topic"]) != 2 {
 		t.Error("Wrong number of subscribers")
 	}
 
-	ps.RemoveSubscription("new-topic", "a")
+	ps.removeSubscription("new-topic", "a")
 	if len(ps.subs["new-topic"]) != 1 {
 		t.Error("Wrong number of subscribers")
 	}
-	ps.RemoveSubscription("new-topic", "b")
+	ps.removeSubscription("new-topic", "b")
 	if len(ps.subs["new-topic"]) != 0 {
 		t.Error("Wrong number of subscribers")
 	}
@@ -98,7 +98,7 @@ func TestAddSubMissingTopic(t *testing.T) {
 	ps := newPubSub()
 
 	s1 := subscriberImpl{"a"}
-	err := ps.AddSubscription("new-topic", &s1)
+	err := ps.addSubscription("new-topic", &s1)
 	if err == nil {
 		t.Error("Error expected")
 	}
@@ -111,8 +111,8 @@ func TestMultiTopicAddRemoveSubscription(t *testing.T) {
 	ps.addTopic("topic2")
 
 	s1 := subscriberImpl{"a"}
-	ps.AddSubscription("topic1", &s1)
-	ps.AddSubscription("topic2", &s1)
+	ps.addSubscription("topic1", &s1)
+	ps.addSubscription("topic2", &s1)
 	if len(ps.subs["topic1"]) != 1 {
 		t.Error("Wrong number of subscribers")
 	}
@@ -120,7 +120,7 @@ func TestMultiTopicAddRemoveSubscription(t *testing.T) {
 		t.Error("Wrong number of subscribers")
 	}
 
-	ps.RemoveSubscription("topic1", "a")
+	ps.removeSubscription("topic1", "a")
 	if len(ps.subs["topic1"]) != 0 {
 		t.Error("Wrong number of subscribers")
 	}
@@ -136,8 +136,8 @@ func TestPublishReceive(t *testing.T) {
 
 	s1 := subscriberImpl{"a"}
 	s2 := subscriberImpl{"b"}
-	ps.AddSubscription("new-topic", &s1)
-	ps.AddSubscription("new-topic", &s2)
+	ps.addSubscription("new-topic", &s1)
+	ps.addSubscription("new-topic", &s2)
 
 	mb := MessageBuilder{}
 	m, _ := mb.NewMessage("new-message", "request-id").Done()
@@ -155,8 +155,8 @@ func TestPublishSend(t *testing.T) {
 
 	s1 := subscriberImpl{"a"}
 	s2 := subscriberImpl{"b"}
-	ps.AddSubscription("new-topic", &s1)
-	ps.AddSubscription("new-topic", &s2)
+	ps.addSubscription("new-topic", &s1)
+	ps.addSubscription("new-topic", &s2)
 
 	mb := MessageBuilder{}
 	m, _ := mb.NewMessage("new-message", "request-id").Done()
@@ -174,8 +174,8 @@ func TestCloseTopicSubscribers(t *testing.T) {
 
 	s1 := subscriberImpl{"a"}
 	s2 := subscriberImpl{"b"}
-	ps.AddSubscription("new-topic", &s1)
-	ps.AddSubscription("new-topic", &s2)
+	ps.addSubscription("new-topic", &s1)
+	ps.addSubscription("new-topic", &s2)
 
 	ps.closeTopic("new-topic")
 	if onCloses != 2 {
