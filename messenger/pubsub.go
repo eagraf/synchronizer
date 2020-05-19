@@ -23,8 +23,8 @@ func newPubSub() *pubSub {
 	return &ps
 }
 
-// AddSubscription applies a Subscriber to a topic
-func (ps *pubSub) AddSubscription(topic string, subscriber Subscriber) error {
+// addSubscription applies a Subscriber to a topic
+func (ps *pubSub) addSubscription(topic string, subscriber Subscriber) error {
 	if _, ok := ps.subs[topic]; ok == false {
 		return errors.New("Topic does not exist")
 	}
@@ -32,8 +32,8 @@ func (ps *pubSub) AddSubscription(topic string, subscriber Subscriber) error {
 	return nil
 }
 
-// RemoveSubscription removes a Subscriber from a topic
-func (ps *pubSub) RemoveSubscription(topic string, subscriberID string) error {
+// removeSubscription removes a Subscriber from a topic
+func (ps *pubSub) removeSubscription(topic string, subscriberID string) error {
 	if _, ok := ps.subs[topic]; ok == false {
 		return errors.New("Topic does not exist")
 	}
