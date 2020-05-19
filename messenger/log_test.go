@@ -25,6 +25,10 @@ func TestStartRoundtrip(t *testing.T) {
 		t.Error("Response should be nil")
 	}
 
+	if l.getRequestRoundTrip("request-id") == nil {
+		t.Error("getRequestRoundtrip failed")
+	}
+
 	mb = MessageBuilder{}
 	m, _ = mb.NewMessage("new-message", "request-id").Done()
 	ps.publishReceived("new-topic", m)
@@ -41,6 +45,10 @@ func TestStartRoundtrip(t *testing.T) {
 	}
 	if len(l.completedRequests) != 1 {
 		t.Error("Length of openRequests should be 0")
+	}
+
+	if l.getRequestRoundTrip("request-id") == nil {
+		t.Error("getRequestRoundtrip failed")
 	}
 }
 

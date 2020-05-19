@@ -44,47 +44,61 @@ func (rt *RoundTrip) Duration() (*time.Duration, error) {
 	return &d, nil
 }
 
-func (l *messengerLog) GetIdentifier() string {
+func (ml *messengerLog) GetIdentifier() string {
 	// TODO universal identifier
 	return "messenger_logger"
 }
 
 // OnReceive callback insert or complete roundtrip
-func (l *messengerLog) OnReceive(topic string, message *Message) {
+func (ml *messengerLog) OnReceive(topic string, message *Message) {
 	// Check if it matches any active message request
-	rt, ok := l.openRequests[message.metadata.Request]
+	rt, ok := ml.openRequests[message.metadata.Request]
 	if ok == true {
 		// Complete round trip
 		rt.response = message
-		l.completedRequests[rt.requestID] = rt
-		delete(l.openRequests, rt.requestID)
+		ml.completedRequests[rt.requestID] = rt
+		delete(ml.openRequests, rt.requestID)
 	} else {
 		// Otherwise create new request
 		rt = new(RoundTrip)
 		rt.requestID = message.metadata.Request
 		rt.request = message
-		l.openRequests[rt.requestID] = rt
+		ml.openRequests[rt.requestID] = rt
 	}
 }
 
 // OnSend callback insert or complete roundtrip
-func (l *messengerLog) OnSend(topic string, message *Message) {
+func (ml *messengerLog) OnSend(topic string, message *Message) {
 	// Check if it matches any active message request
-	rt, ok := l.openRequests[message.metadata.Request]
+	rt, ok := ml.openRequests[message.metadata.Request]
 	if ok == true {
 		// Complete round trip
 		rt.response = message
-		l.completedRequests[rt.requestID] = rt
-		delete(l.openRequests, rt.requestID)
+		ml.completedRequests[rt.requestID] = rt
+		delete(ml.openRequests, rt.requestID)
 	} else {
 		// Otherwise create new request
 		rt = new(RoundTrip)
 		rt.requestID = message.metadata.Request
 		rt.request = message
-		l.openRequests[rt.requestID] = rt
+		ml.openRequests[rt.requestID] = rt
 	}
 }
 
-func (l *messengerLog) OnClose(topic string) {
+func (ml *messengerLog) OnClose(topic string) {
 	// pass
+}
+
+// getRequestRoundTrip gets the RoudnTrip object for a given requestID
+func (ml *messengerLog) getRequestRoundTrip(requestID string) *RoundTrip {
+	// If the requestID matches an open or closed request, return that. Otherwise return nil
+	rt, ok := ml.openRequests[requestID]
+	if ok {
+		return rt
+	}
+	rt, ok = ml.completedRequests[requestID]
+	if ok {
+		return rt
+	}
+	return nil
 }

@@ -17,6 +17,7 @@ import "net/http"
  * 	(2) Subscriber struct
  * 	(4) Message and related types
  * 	(3) MessageBuilder
+ *  (5) RoundTrip
  */
 
 // Messenger type is a wrapper for ConnectionManager, PubSub, and more
@@ -71,4 +72,11 @@ func (m *Messenger) AddSubscription(topic string, subscriber Subscriber) error {
 // RemoveSubscription is a wrapper method for pubSub.removeSubscription
 func (m *Messenger) RemoveSubscription(topic string, subscriberID string) error {
 	return m.ps.removeSubscription(topic, subscriberID)
+}
+
+// messengerLog wrappers
+
+// GetRequestRoundTrip wraps messengerLog.getRequestRoundTrip
+func (m *Messenger) GetRequestRoundTrip(requestID string) *RoundTrip {
+	return m.ml.getRequestRoundTrip(requestID)
 }
