@@ -67,6 +67,10 @@ func TestWorkerRegistration(t *testing.T) {
 	if len(id.(string)) != 36 {
 		t.Error("id not valid UUID")
 	}
+	// Test workers map
+	if len(globalSelector.workers) != 1 {
+		t.Error("Incorrect number of workers")
+	}
 }
 
 func TestHealthCheck(t *testing.T) {
@@ -82,7 +86,7 @@ func TestHealthCheck(t *testing.T) {
 	globalSelector.sendHealthCheck("test-client-id")
 	hc, err := tc.Receive()
 	if err != nil {
-		t.Error("Error recieved instead of registration response: " + err.Error())
+		t.Error("Error recieved instead of health check: " + err.Error())
 	}
 	if hc.GetMetadata().MessageType != MessageHealthCheck {
 		t.Error("Incorrect message type")
@@ -97,7 +101,8 @@ func TestHealthCheck(t *testing.T) {
 	}
 
 	// Check worker status in selector
-	if globalSelector.getWorker("test-client-id").Healthy == false {
+	worker, _ := globalSelector.getWorker("test-client-id")
+	if worker.Healthy == false {
 		t.Error("Worker is not healthy")
 	}
 }
@@ -121,10 +126,11 @@ func TestHealthCheckTimeout(t *testing.T) {
 		t.Error("Incorrect message type")
 	}
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(6 * time.Second)
 
 	// Check worker status in selector
-	if globalSelector.getWorker("test-client-id").Healthy == true {
+	worker, _ := globalSelector.getWorker("test-client-id")
+	if worker.Healthy == true {
 		t.Error("Worker is healthy")
 	}
 }
@@ -144,7 +150,8 @@ func TestWorkerDisconnect(t *testing.T) {
 	}
 
 	// Check worker status in selector
-	if globalSelector.getWorker("test-client-id").Disconnected == false {
+	worker, _ := globalSelector.getWorker("test-client-id")
+	if worker.Disconnected == false {
 		t.Error("Worker is not disconnected")
 	}
 

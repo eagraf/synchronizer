@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/rpc"
 	"strconv"
+	"time"
 
 	"github.com/eagraf/synchronizer/messenger"
 	"github.com/go-chi/chi"
@@ -19,10 +20,12 @@ const (
 	MessageHealthCheck string = "selector_health_check"
 	// MessageHandoff is a message type identifier for selector handoffs
 	MessageHandoff string = "selector_handoff"
+	// HealthCheckTimeout Timeout length (TODO exponential backoff)
+	HealthCheckTimeout = 5 * time.Second
 )
 
 type Selector struct {
-	workers   []Worker // Don't use a list of pointers so that workers can be easilly encoded
+	workers   map[string]*Worker
 	messenger *messenger.Messenger
 }
 
@@ -48,9 +51,10 @@ type HandoffResponse struct {
 
 func newSelector(apiPort int, rpcPort int) (*Selector, error) {
 	// Initialize selector
-	var s *Selector = new(Selector)
-	m := messenger.NewMessenger()
-	s.messenger = m
+	var s *Selector = &Selector{
+		workers:   make(map[string]*Worker),
+		messenger: messenger.NewMessenger(),
+	}
 
 	// Start api
 	routes := registerRoutes(s)
@@ -87,6 +91,7 @@ func registerRoutes(s *Selector) http.Handler {
 
 // HTTP endpoint that promotes an HTTP request to a full WebSocket connection
 func (s *Selector) websocket(w http.ResponseWriter, r *http.Request) {
+	// Input validation
 	if id := r.Header.Get("clientID"); id == "" {
 		http.Error(w, "Missing clientID header.", 400)
 		return
@@ -98,6 +103,14 @@ func (s *Selector) websocket(w http.ResponseWriter, r *http.Request) {
 	}
 	// Otherwise, websocket connection is managed by messenger
 	// TODO should there be a return?
+
+	// Add to workers map
+	worker := &Worker{
+		UUID:         r.Header.Get("clientID"),
+		Healthy:      true,
+		Disconnected: false,
+	}
+	s.workers[worker.UUID] = worker
 
 	// Send registration message with session id
 	mb := new(messenger.MessageBuilder)
@@ -128,7 +141,9 @@ func (s *Selector) GetIdentifier() {
 }
 
 func (s *Selector) OnReceive(topic string, message *messenger.Message) {
-
+	switch message.GetMetadata().MessageType {
+	case MessageHealthCheck:
+	}
 }
 
 /*
@@ -150,12 +165,26 @@ func (s *Selector) sendRegistrationResponse() {
 }
 
 func (s *Selector) sendHealthCheck(workerUUID string) error {
+	// Send the health check message
 	mb := new(messenger.MessageBuilder)
-	m, err := mb.NewMessage(MessageHealthCheck, uuid.New().String()).Done()
+	requestID := uuid.New().String()
+	m, err := mb.NewMessage(MessageHealthCheck, requestID).Done()
 	if err != nil {
 		return err
 	}
 	s.messenger.Send(workerUUID, m)
+
+	// Timeout waits in a new thread
+	go func() {
+		time.Sleep(HealthCheckTimeout)
+
+		// Check if timeout was successful
+		rt := s.messenger.GetRequestRoundTrip(requestID)
+		if rt != nil && rt.Response != nil {
+			s.workers[workerUUID].Healthy = true
+		}
+		s.workers[workerUUID].Healthy = false
+	}()
 	return nil
 }
 
@@ -163,6 +192,7 @@ func (s *Selector) sendHandoff() {
 
 }
 
-func (s *Selector) getWorker(workerUUID string) *Worker {
-	return nil
+func (s *Selector) getWorker(workerUUID string) (*Worker, bool) {
+	res, ok := s.workers[workerUUID]
+	return res, ok
 }
