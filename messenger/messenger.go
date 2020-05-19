@@ -43,7 +43,12 @@ func NewMessenger() *Messenger {
 
 // AddConnection is a wrapper method for connectionManager.AddConnection
 func (m *Messenger) AddConnection(workerUUID string, writer http.ResponseWriter, request *http.Request) error {
-	return m.cm.AddConnection(workerUUID, writer, request)
+	err := m.cm.AddConnection(workerUUID, writer, request)
+	// Have messenger logger listen to updates on this connection as well
+	if err != nil {
+		m.AddSubscription(workerUUID, m.ml)
+	}
+	return err
 }
 
 // RemoveConnection is a wrapper method for connectionManager.RemoveConnection
@@ -55,6 +60,8 @@ func (m *Messenger) RemoveConnection(workerUUID string) {
 func (m *Messenger) Send(workerUUID string, message *Message) {
 	m.cm.Send(workerUUID, message)
 }
+
+// pubSub wrappers
 
 // AddSubscription is a wrapper method for pubSub.AddSubscription
 func (m *Messenger) AddSubscription(topic string, subscriber Subscriber) error {
