@@ -62,5 +62,21 @@ func (tc *TestClient) Receive() (*Message, error) {
 
 // Close websocket
 func (tc *TestClient) Close() error {
-	return tc.conn.Close()
+	//return tc.conn.Close()
+	mb := MessageBuilder{}
+	m, _ := mb.NewMessage(MessageClose, "").Done() // TODO ignore blank requestID
+
+	w, err := tc.conn.NextWriter(websocket.BinaryMessage)
+	if err != nil {
+		return err
+	}
+
+	// Send the message
+	err = writeMessage(m, w)
+	w.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+
 }

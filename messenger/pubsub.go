@@ -1,6 +1,8 @@
 package messenger
 
-import "errors"
+import (
+	"errors"
+)
 
 // Subscriber is an interface implemented by routines that need to listen for specific messages
 type Subscriber interface {

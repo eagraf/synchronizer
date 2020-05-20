@@ -46,6 +46,14 @@ type Metadata struct {
 	Headers     map[string]interface{} `json:"headers"`
 }
 
+// MessageType constants
+const (
+	MessageClose                        string = "close_websocket"
+	MessageSelectorRegistrationResponse string = "selector_registration_response"
+	MessageSelectorHealthChek           string = "selector_health_check"
+	MessageSelectorHandoff              string = "selector_handoff"
+)
+
 // MessageBuilder constructs a new message struct
 type MessageBuilder struct {
 	message *Message
