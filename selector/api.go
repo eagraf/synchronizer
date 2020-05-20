@@ -1,6 +1,7 @@
 package selector
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/eagraf/synchronizer/messenger"
@@ -26,7 +27,8 @@ func (s *Selector) websocket(w http.ResponseWriter, r *http.Request) {
 	}
 	err := s.messenger.AddConnection(r.Header.Get("clientID"), w, r)
 	if err != nil {
-		http.Error(w, "Failed to add connection: "+err.Error(), 500)
+		fmt.Println(err.Error())
+		//http.Error(w, "Failed to add connection: "+err.Error(), 500)
 		return
 	}
 	// Otherwise, websocket connection is managed by messenger
@@ -50,7 +52,8 @@ func (s *Selector) websocket(w http.ResponseWriter, r *http.Request) {
 		Done()
 
 	if err != nil {
-		http.Error(w, "Failed to add connection: "+err.Error(), 500)
+		fmt.Println(err.Error())
+		//http.Error(w, "Failed to add connection: "+err.Error(), 500)
 		return
 	}
 

@@ -1,8 +1,6 @@
 package selector
 
 import (
-	"fmt"
-
 	"github.com/eagraf/synchronizer/messenger"
 )
 
@@ -27,7 +25,5 @@ func (s *Selector) OnSend(topic string, message *messenger.Message) {
 }
 
 func (s *Selector) OnClose(topic string) {
-	fmt.Println(topic)
 	s.workers[topic].Disconnected = true
-	fmt.Println(s.workers[topic])
 }

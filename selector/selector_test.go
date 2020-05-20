@@ -1,7 +1,6 @@
 package selector
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"testing"
@@ -47,7 +46,7 @@ func TestNewSelector(t *testing.T) {
 }
 
 func TestWorkerRegistration(t *testing.T) {
-	tc, err := messenger.NewTestClient("http://localhost:3000/websocket/", "test-client-id")
+	tc, err := messenger.NewTestClient("http://localhost:3000/websocket/", "worker-registration-id")
 	if err != nil {
 		t.Error("Failed to establish websocket connection: " + err.Error())
 	}
@@ -72,10 +71,12 @@ func TestWorkerRegistration(t *testing.T) {
 	if len(globalSelector.workers) != 1 {
 		t.Error("Incorrect number of workers")
 	}
+
+	tc.Close()
 }
 
 func TestHealthCheck(t *testing.T) {
-	tc, _ := messenger.NewTestClient("http://localhost:3000/websocket/", "test-client-id")
+	tc, _ := messenger.NewTestClient("http://localhost:3000/websocket/", "health-check-id")
 
 	// Receive connection response
 	_, err := tc.Receive()
@@ -84,7 +85,7 @@ func TestHealthCheck(t *testing.T) {
 	}
 
 	// Send healthcheck
-	globalSelector.sendHealthCheck("test-client-id")
+	globalSelector.sendHealthCheck("health-check-id")
 	hc, err := tc.Receive()
 	if err != nil {
 		t.Error("Error recieved instead of health check: " + err.Error())
@@ -102,14 +103,16 @@ func TestHealthCheck(t *testing.T) {
 	}
 
 	// Check worker status in selector
-	worker, _ := globalSelector.getWorker("test-client-id")
+	worker, _ := globalSelector.getWorker("health-check-id")
 	if worker.Healthy == false {
 		t.Error("Worker is not healthy")
 	}
+
+	tc.Close()
 }
 
 func TestHealthCheckTimeout(t *testing.T) {
-	tc, _ := messenger.NewTestClient("http://localhost:3000/websocket/", "test-client-id")
+	tc, _ := messenger.NewTestClient("http://localhost:3000/websocket/", "health-check-timeout-id")
 
 	// Receive connection response
 	_, err := tc.Receive()
@@ -118,7 +121,7 @@ func TestHealthCheckTimeout(t *testing.T) {
 	}
 
 	// Send healthcheck
-	globalSelector.sendHealthCheck("test-client-id")
+	globalSelector.sendHealthCheck("health-check-timeout-id")
 	hc, err := tc.Receive()
 	if err != nil {
 		t.Error("Error recieved instead of registration response: " + err.Error())
@@ -130,21 +133,22 @@ func TestHealthCheckTimeout(t *testing.T) {
 	time.Sleep(6 * time.Second)
 
 	// Check worker status in selector
-	worker, _ := globalSelector.getWorker("test-client-id")
+	worker, _ := globalSelector.getWorker("health-check-timeout-id")
 	if worker.Healthy == true {
 		t.Error("Worker is healthy")
 	}
+
+	tc.Close()
 }
 
 func TestWorkerDisconnect(t *testing.T) {
-	tc, _ := messenger.NewTestClient("http://localhost:3000/websocket/", "test-client-id")
+	tc, _ := messenger.NewTestClient("http://localhost:3000/websocket/", "worker-disconnect-id")
 
 	// Receive connection response
 	_, err := tc.Receive()
 	if err != nil {
 		t.Error("Error recieved instead of registration response: " + err.Error())
 	}
-	fmt.Println("hello")
 	err = tc.Close()
 	time.Sleep(time.Second) // Given some delay
 	if err != nil {
@@ -152,19 +156,17 @@ func TestWorkerDisconnect(t *testing.T) {
 	}
 
 	// Check worker status in selector
-	worker, _ := globalSelector.getWorker("test-client-id")
-	fmt.Println(worker)
+	worker, _ := globalSelector.getWorker("worker-disconnect-id")
 	if worker.Disconnected == false {
 		t.Error("Worker is not disconnected")
 	}
-
 }
 
 func TestRPCGetWorkers(t *testing.T) {
 	// Connect three clients
-	messenger.NewTestClient("http://localhost:3000/websocket/", "client1")
-	messenger.NewTestClient("http://localhost:3000/websocket/", "client2")
-	messenger.NewTestClient("http://localhost:3000/websocket/", "client3")
+	tc1, _ := messenger.NewTestClient("http://localhost:3000/websocket/", "client1")
+	tc2, _ := messenger.NewTestClient("http://localhost:3000/websocket/", "client2")
+	tc3, _ := messenger.NewTestClient("http://localhost:3000/websocket/", "client3")
 
 	req := WorkerRequest{}
 	res := new(WorkerResponse)
@@ -173,11 +175,13 @@ func TestRPCGetWorkers(t *testing.T) {
 		t.Error("RPC failed: " + err.Error())
 	}
 
-	fmt.Println(res.workers)
 	if len(res.workers) < 3 {
 		t.Error("Incorrect number of workers")
 	}
 
+	tc1.Close()
+	tc2.Close()
+	tc3.Close()
 }
 
 // TODO testing handoff will be difficult because it requires interactions with other services
