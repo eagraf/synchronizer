@@ -23,29 +23,18 @@ const (
 	HealthCheckTimeout = 5 * time.Second
 )
 
+// Selector service struct
 type Selector struct {
-	workers   map[string]*Worker // TODO maybe use a sorted tree based structure -> when workers are transferred to coordinator, coord. just has to merge workers together from each selector
-	messenger *messenger.Messenger
+	workers    map[string]*Worker // TODO maybe use a sorted tree based structure -> when workers are transferred to coordinator, coord. just has to merge workers together from each selector
+	messenger  *messenger.Messenger
+	rpcHandler *RPCHandler
 }
 
+// Worker struct for mobile device
 type Worker struct {
 	UUID         string
 	Healthy      bool
 	Disconnected bool
-}
-
-type WorkerRequest struct {
-	numRequested int
-}
-
-type WorkerResponse struct {
-	workers []Worker
-}
-
-type HandoffRequest struct {
-}
-
-type HandoffResponse struct {
 }
 
 func newSelector(apiPort int, rpcPort int) (*Selector, error) {
@@ -54,6 +43,8 @@ func newSelector(apiPort int, rpcPort int) (*Selector, error) {
 		workers:   make(map[string]*Worker),
 		messenger: messenger.NewMessenger(),
 	}
+	rpcHandler := RPCHandler{selector: s}
+	s.rpcHandler = &rpcHandler
 
 	// Start api
 	routes := registerRoutes(s)
@@ -65,7 +56,7 @@ func newSelector(apiPort int, rpcPort int) (*Selector, error) {
 	go http.Serve(listener, routes)
 
 	// Start rpc
-	rpc.Register(s)
+	rpc.Register(s.rpcHandler)
 	rpc.HandleHTTP()
 	listener, err = net.Listen("tcp", ":"+strconv.Itoa(rpcPort))
 	if err != nil {

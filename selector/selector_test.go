@@ -170,7 +170,7 @@ func TestRPCGetWorkers(t *testing.T) {
 
 	req := WorkerRequest{}
 	res := new(WorkerResponse)
-	err := globalSelector.GetWorkers(req, res)
+	err := globalSelector.rpcHandler.GetWorkers(req, res)
 	if err != nil {
 		t.Error("RPC failed: " + err.Error())
 	}
