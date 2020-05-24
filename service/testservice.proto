@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option go_package = "github.com/eagraf/synchronizer/service";
+option java_multiple_files = true;
+option java_package = "com.github.eagraf.synchronizer.service";
+option java_outer_classname = "TestService";
+
+package testservice;
+
+// The greeting service definition.
+service Test {
+  rpc TestRPC(Ping) returns (Pong) {}
+}
+
+// The request message containing the user's name.
+message Ping {
+  string message = 1;
+}
+
+// The response message containing the greetings
+message Pong {
+  string message = 1;
+}

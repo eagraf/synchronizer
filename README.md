@@ -26,3 +26,8 @@ Very simple Go style testing for now:
 ```
 go test
 ```
+
+## Compiling gRPC generated code
+
+```
+protoc -I service/ service/testservice.proto --go_out=plugins=grpc:service --go_opt=paths=source_relative```
