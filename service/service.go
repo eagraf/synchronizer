@@ -1,8 +1,6 @@
 package service
 
 import (
-	fmt "fmt"
-	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -36,16 +34,16 @@ func (s *Service) AddPeer(newPeer *Service) error {
 	return nil
 }
 
+// A ServiceInitiator is a driver for starting services (ServicePool or Kubernetes variant)
 type ServiceInitiator interface {
 	StartService(serviceType string, grpcServiceDescription *grpc.ServiceDesc, externalAPI *http.Handler) (*Service, error)
 }
 
 // ServicePool allows for multiple services to be interconnected and run locally without the need for starting a Kubernetes cluster
-// Implements ServiceInitiator
-// For development use only
 type ServicePool struct {
-	portCount int // Helper variable to keep track of unassigned ports
-	log       log.Logger
+	// Implements ServiceInitiator
+	// For development use only
+	portCount int                            // Helper variable to keep track of unassigned ports
 	Scale     scale                          // Number of each type of service
 	Pool      map[string]map[string]*Service // Map of all services
 }
@@ -54,6 +52,7 @@ type scale struct {
 	test int
 }
 
+// NewServicePool creates a new ServicePool object
 func NewServicePool() *ServicePool {
 	sp := &ServicePool{
 		portCount: 0,
@@ -63,6 +62,13 @@ func NewServicePool() *ServicePool {
 	return sp
 }
 
+/*
+ * Stages of starting service:
+ *   (1) Start service servers (external API and RPC)
+ *   (2) Connect to other services
+ */
+
+// StartService creates a new service and connects it to the correct peer services
 func (sp *ServicePool) StartService(serviceType string, rpcHandler interface{}, apiHandler http.Handler) (*Service, error) {
 	// Check service is valid
 	if _, ok := sp.Pool[serviceType]; ok == false {
@@ -82,31 +88,14 @@ func (sp *ServicePool) StartService(serviceType string, rpcHandler interface{}, 
 	// Update the service pool
 	sp.Pool[serviceType][service.ID] = service
 
-	// Start external API handling
-	listener, err := net.Listen("tcp", ":"+strconv.Itoa(service.APIPort))
-	if err != nil {
-		log.Fatal("listen error (api):", err)
+	// Start servers
+	if err := startAPIServer(service, apiHandler); err != nil {
 		return nil, err
 	}
-	go http.Serve(listener, apiHandler)
 
-	//go log.Fatal(http.ListenAndServe(":"+strconv.Itoa(service.APIPort), apiHandler))
-	fmt.Println("yo")
-
-	// Start handling gRPC
-	go func() {
-		lis, err := net.Listen("tcp", ":"+strconv.Itoa(service.RPCPort))
-		if err != nil {
-			log.Fatalf("failed to listen: %v", err)
-		}
-		rpcServer := grpc.NewServer()
-		rpcServer.RegisterService(getServiceDesc(serviceType), rpcHandler)
-
-		//pb.RegisterGreeterServer(s, &server{})
-		if err := rpcServer.Serve(lis); err != nil {
-			log.Fatalf("failed to serve: %v", err)
-		}
-	}()
+	if err := startRPCServer(service, rpcHandler); err != nil {
+		return nil, err
+	}
 
 	return service, nil
 }
@@ -119,4 +108,28 @@ func getServiceDesc(serviceType string) *grpc.ServiceDesc {
 	default:
 		return nil
 	}
+}
+
+// Helper for starting RPC server
+func startRPCServer(service *Service, rpcHandler interface{}) error {
+	listener, err := net.Listen("tcp", ":"+strconv.Itoa(service.RPCPort))
+	if err != nil {
+		return err
+	}
+	rpcServer := grpc.NewServer()
+	rpcServer.RegisterService(getServiceDesc(service.ServiceType), rpcHandler)
+
+	go rpcServer.Serve(listener)
+	return nil
+}
+
+// Helper for starting external API
+func startAPIServer(service *Service, apiHandler http.Handler) error {
+	listener, err := net.Listen("tcp", ":"+strconv.Itoa(service.APIPort))
+	if err != nil {
+		return err
+	}
+	// TODO error handling if the server unexpectedly stops
+	go http.Serve(listener, apiHandler)
+	return nil
 }
