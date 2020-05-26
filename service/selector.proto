@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+option go_package = "github.com/eagraf/synchronizer/service";
+option java_multiple_files = true;
+option java_package = "com.github.eagraf.synchronizer.service";
+option java_outer_classname = "SelectorService";
+
+package selectorservice;
+
+service Selector {
+  rpc GetWorkers(WorkersRequest) returns (WorkersResponse) {}
+  rpc Handoff(HandoffRequest) returns (HandoffResponse) {}
+}
+
+// Coordinator asks for all or specific number of workers
+message WorkersRequest {
+  bool all = 1;
+  int32 number = 2;
+}
+
+// Selector responds with a list of available workers
+message WorkersResponse {
+  message Worker {
+    string workerUUID = 1;
+    string deviceType = 2;
+    float churnProbability = 3;
+    int32 flops = 4; 
+  }
+  repeated Worker workers = 1;
+}
+
+// Coordinator sends a list of assignments to selector
+message HandoffRequest {
+  message Assignment {
+    string workerUUID = 1;
+    string taskUUID = 2;
+    string dataServerID = 3;
+    string aggregatorID = 4;
+  }
+  repeated Assignment assignments = 1;
+}
+
+// Empty for now
+message HandoffResponse {}
