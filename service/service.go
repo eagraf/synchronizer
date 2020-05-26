@@ -17,16 +17,16 @@ import (
 type Service struct {
 	ID          string
 	ServiceType string
-	IP          *net.IP
+	IP          net.IP
 	APIPort     int
 	RPCPort     int
-	Peers       map[string]map[string]*Service // Telemetry. Key1: Service Type, Key2: Service ID
+	Peers       map[string]map[string]*Connection // Telemetry. Key1: Service Type, Key2: Service ID
 	RPCService  interface{}
 }
 
 type Connection struct {
-	service    *Service
-	clientConn *grpc.ClientConn
+	Service    *Service
+	ClientConn *grpc.ClientConn
 }
 
 // AddPeer registers a new peer for this service to communicate with
@@ -37,25 +37,24 @@ func (s *Service) AddPeer(newPeer *Service) error {
 // A ServiceInitiator is a driver for starting services (ServicePool or Kubernetes variant)
 type ServiceInitiator interface {
 	StartService(serviceType string, grpcServiceDescription *grpc.ServiceDesc, externalAPI *http.Handler) (*Service, error)
+	ConnectService(service *Service) error
 }
 
 // ServicePool allows for multiple services to be interconnected and run locally without the need for starting a Kubernetes cluster
 type ServicePool struct {
 	// Implements ServiceInitiator
 	// For development use only
-	portCount int                            // Helper variable to keep track of unassigned ports
-	Scale     scale                          // Number of each type of service
-	Pool      map[string]map[string]*Service // Map of all services
-}
-
-type scale struct {
-	test int
+	portCount int // Helper variable to keep track of unassigned ports
+	topology  map[string]map[string]bool
+	//	Scale     scale                          // Number of each type of service
+	Pool map[string]map[string]*Service // Map of all services
 }
 
 // NewServicePool creates a new ServicePool object
-func NewServicePool() *ServicePool {
+func NewServicePool(top map[string]map[string]bool) *ServicePool {
 	sp := &ServicePool{
 		portCount: 0,
+		topology:  top, // Key 1: Origin Service, Key 2: Receiving Service, Value: There is a link
 		//Scale:     scale{},
 		Pool: make(map[string]map[string]*Service),
 	}
@@ -78,10 +77,11 @@ func (sp *ServicePool) StartService(serviceType string, rpcHandler interface{}, 
 	// Create Service
 	service := &Service{
 		ID:          serviceType + " " + string(len(sp.Pool[serviceType])),
+		IP:          net.IPv4(127, 0, 0, 1),
 		ServiceType: serviceType,
 		APIPort:     2000 + sp.portCount,
 		RPCPort:     2001 + sp.portCount,
-		Peers:       make(map[string]map[string]*Service),
+		Peers:       make(map[string]map[string]*Connection),
 	}
 	// Update portCount
 	sp.portCount += 2
@@ -98,6 +98,50 @@ func (sp *ServicePool) StartService(serviceType string, rpcHandler interface{}, 
 	}
 
 	return service, nil
+}
+
+// ConnectService establishes RPC connections based off of the service topology
+func (sp *ServicePool) ConnectService(service *Service) error {
+	// TODO handle errors
+	// Connect incoming services
+	for st, connections := range sp.topology { // Range through each type of service
+		if _, ok := connections[service.ServiceType]; ok == true {
+			// Establish connections
+			for _, s := range sp.Pool[st] { // Range through all services of a type
+				connect(s, service)
+			}
+		}
+	}
+
+	// Connect outgoing services
+	for st := range sp.topology[service.ServiceType] { // Range through each outgoing service connection
+		for _, s := range sp.Pool[st] { // Range through all services of a type
+			connect(service, s)
+		}
+	}
+	return nil
+}
+
+// Establish a RPC connection
+// TODO handle unexpected connection failures
+func connect(source *Service, dest *Service) error {
+	conn, err := grpc.Dial(dest.IP.String()+":"+strconv.Itoa(dest.RPCPort), grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		return err
+	}
+	// Add to peers
+	c := &Connection{
+		Service:    dest,
+		ClientConn: conn,
+	}
+
+	// Create new map if needed for the service type
+	if _, ok := source.Peers[dest.ServiceType]; ok == false {
+		source.Peers[dest.ServiceType] = make(map[string]*Connection)
+	}
+
+	source.Peers[dest.ServiceType][dest.ID] = c
+	return nil
 }
 
 // Get the RPC service description base off the service type
