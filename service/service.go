@@ -24,6 +24,7 @@ type Service struct {
 	RPCService  interface{}
 }
 
+// Connection represents a link between two services
 type Connection struct {
 	Service    *Service
 	ClientConn *grpc.ClientConn
