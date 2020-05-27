@@ -1,14 +1,10 @@
 package selector
 
 import (
-	"log"
-	"net"
-	"net/http"
-	"net/rpc"
-	"strconv"
 	"time"
 
 	"github.com/eagraf/synchronizer/messenger"
+	"github.com/eagraf/synchronizer/service"
 	"github.com/google/uuid"
 )
 
@@ -27,7 +23,8 @@ const (
 type Selector struct {
 	workers    map[string]*Worker // TODO maybe use a sorted tree based structure -> when workers are transferred to coordinator, coord. just has to merge workers together from each selector
 	messenger  *messenger.Messenger
-	rpcHandler *RPCHandler
+	rpcHandler RPCService
+	service    *service.Service
 }
 
 // Worker struct for mobile device
@@ -37,33 +34,21 @@ type Worker struct {
 	Disconnected bool
 }
 
-func newSelector(apiPort int, rpcPort int) (*Selector, error) {
+func newSelector(si service.ServiceInitiator) (*Selector, error) {
 	// Initialize selector
 	var s *Selector = &Selector{
 		workers:   make(map[string]*Worker),
 		messenger: messenger.NewMessenger(),
 	}
-	rpcHandler := RPCHandler{selector: s}
-	s.rpcHandler = &rpcHandler
 
-	// Start api
-	routes := registerRoutes(s)
-	listener, err := net.Listen("tcp", ":"+strconv.Itoa(apiPort))
+	rpcHandler := RPCService{}
+	apiHandler := registerRoutes(s)
+
+	service, err := si.StartService("Selector", rpcHandler, apiHandler)
 	if err != nil {
-		log.Fatal("listen error (api):", err)
 		return nil, err
 	}
-	go http.Serve(listener, routes)
-
-	// Start rpc
-	rpc.Register(s.rpcHandler)
-	rpc.HandleHTTP()
-	listener, err = net.Listen("tcp", ":"+strconv.Itoa(rpcPort))
-	if err != nil {
-		log.Fatal("listen error (rpc):", err)
-		return nil, err
-	}
-	go http.Serve(listener, nil)
+	s.service = service
 
 	// Return selector
 	return s, nil

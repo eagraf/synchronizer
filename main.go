@@ -2,11 +2,9 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/eagraf/synchronizer/service"
-	"github.com/go-chi/chi"
 	"google.golang.org/grpc"
 )
 
@@ -41,10 +39,12 @@ func main() {
 	r := RegisterRoutes()
 	log.Fatal(http.ListenAndServe(":2216", r))*/
 
-	sp := service.NewServicePool()
+	topology := make(map[string]map[string]bool)
+	topology["Test"] = map[string]bool{"Test": true}
+	_ = service.NewServicePool(topology)
 
 	// Create new TestService
-	rpc := TestServerImpl{}
+	/*rpc := TestServerImpl{}
 	API := chi.NewRouter()
 	API.Route("/test", func(r chi.Router) {
 		API.Get("/", testEndpoint)
@@ -52,5 +52,5 @@ func main() {
 	_, err := sp.StartService("Test", rpc, API)
 	if err != nil {
 		fmt.Println("fuck")
-	}
+	}*/
 }

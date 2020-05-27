@@ -37,7 +37,7 @@ func (s *Service) AddPeer(newPeer *Service) error {
 
 // A ServiceInitiator is a driver for starting services (ServicePool or Kubernetes variant)
 type ServiceInitiator interface {
-	StartService(serviceType string, grpcServiceDescription *grpc.ServiceDesc, externalAPI *http.Handler) (*Service, error)
+	StartService(serviceType string, rpcHandler interface{}, apiHandler http.Handler) (*Service, error)
 	ConnectService(service *Service) error
 }
 
@@ -49,6 +49,16 @@ type ServicePool struct {
 	topology  map[string]map[string]bool
 	//	Scale     scale                          // Number of each type of service
 	Pool map[string]map[string]*Service // Map of all services
+}
+
+// DefaultTopology is a base topology that can be used for testing
+var DefaultTopology map[string]map[string]bool = map[string]map[string]bool{
+	"Test": {
+		"Test": true,
+	},
+	"Selector": {
+		"Coordinator": true,
+	},
 }
 
 // NewServicePool creates a new ServicePool object
@@ -150,6 +160,8 @@ func getServiceDesc(serviceType string) *grpc.ServiceDesc {
 	switch serviceType {
 	case "Test":
 		return &_Test_serviceDesc
+	case "Selector":
+		return &_Selector_serviceDesc
 	default:
 		return nil
 	}

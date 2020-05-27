@@ -1,31 +1,54 @@
 package selector
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"os"
+	"reflect"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/eagraf/synchronizer/messenger"
+	"github.com/eagraf/synchronizer/service"
+	"google.golang.org/grpc"
 )
 
 // Selector global variable
 var globalSelector *Selector
+var apiURL string
+var rpcURL string
 
 // Setup common server for all tests to use
 func TestMain(m *testing.M) {
-	s, err := newSelector(3000, 3001)
+	var _ service.SelectorServer = (*RPCService)(nil)
+
+	sp := service.NewServicePool(service.DefaultTopology)
+	s, err := newSelector(sp)
 	if err != nil {
 		// Server failed to start
 		os.Exit(-1)
 	}
 	globalSelector = s
+	apiURL = "http://localhost:" + strconv.Itoa(globalSelector.service.APIPort)
+	rpcURL = "localhost:" + strconv.Itoa(globalSelector.service.RPCPort)
 	os.Exit(m.Run())
+}
+
+func TestRPCServerImplementation(t *testing.T) {
+	var _ service.SelectorServer = (*RPCService)(nil)
+
+	rs := RPCService{}
+	st := reflect.TypeOf(rs)
+	if !st.Implements(reflect.TypeOf((*service.SelectorServer)(nil)).Elem()) {
+		t.Error("Interface fails to implement SelectorServer")
+	}
 }
 
 func TestNewSelector(t *testing.T) {
 	// Test that external API started
-	req, err := http.NewRequest("GET", "http://localhost:3000", nil)
+	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
 		t.Error("Error constructing test API request: " + err.Error())
 	}
@@ -35,18 +58,23 @@ func TestNewSelector(t *testing.T) {
 	}
 
 	// Test that RPC started
-	req, err = http.NewRequest("GET", "http://localhost:3001", nil)
+	conn, err := grpc.Dial(rpcURL, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
-		t.Error("Error constructing test API request: " + err.Error())
+		t.Errorf("did not connect: %v", err)
 	}
-	_, err = http.DefaultClient.Do(req)
+	defer conn.Close()
+	c := service.NewSelectorClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	_, err = c.GetWorkers(ctx, &service.WorkersRequest{})
 	if err != nil {
-		t.Error("Request failed: " + err.Error())
+		t.Errorf("could not greet: %v", err)
 	}
 }
 
 func TestWorkerRegistration(t *testing.T) {
-	tc, err := messenger.NewTestClient("http://localhost:3000/websocket/", "worker-registration-id")
+	tc, err := messenger.NewTestClient(apiURL+"/websocket/", "worker-registration-id")
 	if err != nil {
 		t.Error("Failed to establish websocket connection: " + err.Error())
 	}
@@ -76,7 +104,7 @@ func TestWorkerRegistration(t *testing.T) {
 }
 
 func TestHealthCheck(t *testing.T) {
-	tc, _ := messenger.NewTestClient("http://localhost:3000/websocket/", "health-check-id")
+	tc, _ := messenger.NewTestClient(apiURL+"/websocket/", "health-check-id")
 
 	// Receive connection response
 	_, err := tc.Receive()
@@ -112,7 +140,7 @@ func TestHealthCheck(t *testing.T) {
 }
 
 func TestHealthCheckTimeout(t *testing.T) {
-	tc, _ := messenger.NewTestClient("http://localhost:3000/websocket/", "health-check-timeout-id")
+	tc, _ := messenger.NewTestClient(apiURL+"/websocket/", "health-check-timeout-id")
 
 	// Receive connection response
 	_, err := tc.Receive()
@@ -142,7 +170,7 @@ func TestHealthCheckTimeout(t *testing.T) {
 }
 
 func TestWorkerDisconnect(t *testing.T) {
-	tc, _ := messenger.NewTestClient("http://localhost:3000/websocket/", "worker-disconnect-id")
+	tc, _ := messenger.NewTestClient(apiURL+"/websocket/", "worker-disconnect-id")
 
 	// Receive connection response
 	_, err := tc.Receive()
@@ -164,20 +192,25 @@ func TestWorkerDisconnect(t *testing.T) {
 
 func TestRPCGetWorkers(t *testing.T) {
 	// Connect three clients
-	tc1, _ := messenger.NewTestClient("http://localhost:3000/websocket/", "client1")
-	tc2, _ := messenger.NewTestClient("http://localhost:3000/websocket/", "client2")
-	tc3, _ := messenger.NewTestClient("http://localhost:3000/websocket/", "client3")
+	tc1, _ := messenger.NewTestClient(apiURL+"/websocket/", "client1")
+	tc2, _ := messenger.NewTestClient(apiURL+"/websocket/", "client2")
+	tc3, _ := messenger.NewTestClient(apiURL+"/websocket/", "client3")
 
-	req := WorkerRequest{}
-	res := new(WorkerResponse)
-	err := globalSelector.rpcHandler.GetWorkers(req, res)
+	// Test that RPC started
+	conn, err := grpc.Dial(rpcURL, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
-		t.Error("RPC failed: " + err.Error())
+		t.Errorf("did not connect: %v", err)
 	}
+	defer conn.Close()
+	c := service.NewSelectorClient(conn)
 
-	if len(res.workers) < 3 {
-		t.Error("Incorrect number of workers")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	workers, err := c.GetWorkers(ctx, &service.WorkersRequest{})
+	if err != nil {
+		t.Errorf("could not greet: %v", err)
 	}
+	fmt.Println(workers)
 
 	tc1.Close()
 	tc2.Close()

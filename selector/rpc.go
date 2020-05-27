@@ -1,40 +1,20 @@
 package selector
 
-// RPCHandler holds all exported RPC methods
-type RPCHandler struct {
-	selector *Selector
+import (
+	"context"
+
+	"github.com/eagraf/synchronizer/service"
+)
+
+// RPCService is an implementation of service.SelectorServer
+type RPCService struct{}
+
+// GetWorkers reutrns a list of available workers to the coordinator
+func (rs RPCService) GetWorkers(ctx context.Context, req *service.WorkersRequest) (*service.WorkersResponse, error) {
+	return &service.WorkersResponse{}, nil
 }
 
-// WorkerRequest is input for GetWorkers RPC call
-type WorkerRequest struct {
-	numRequested int
-}
-
-// WorkerResponse is output for GetWorkers RPC call
-type WorkerResponse struct {
-	workers []Worker
-}
-
-// GetWorkers RPC interface
-func (rh *RPCHandler) GetWorkers(request WorkerRequest, reply *WorkerResponse) error {
-	// Convert to slice
-	res := make([]Worker, 0, len(rh.selector.workers))
-	for _, w := range rh.selector.workers {
-		res = append(res, *w)
-	}
-	reply.workers = res
-	return nil
-}
-
-// HandoffRequest is input for Handoff RPC call
-type HandoffRequest struct {
-}
-
-// HandoffResponse is output for Handoff RPC call
-type HandoffResponse struct {
-}
-
-// Handoff RPC interface
-func (rh *RPCHandler) Handoff(request HandoffRequest, reply *HandoffRequest) error {
-	return nil
+// Handoff performs handoff of a worker to data server/aggregator
+func (rs RPCService) Handoff(ctx context.Context, req *service.HandoffRequest) (*service.HandoffResponse, error) {
+	return &service.HandoffResponse{}, nil
 }
