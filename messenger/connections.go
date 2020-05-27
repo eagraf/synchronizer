@@ -84,7 +84,8 @@ func (cm *connectionManager) RemoveConnection(workerUUID string) {
 // TODO recovery from failed sends
 func (cm *connectionManager) Send(workerUUID string, message *Message) {
 	if _, ok := cm.connections[workerUUID]; ok == false {
-		fmt.Println(errors.New("No connection with that UUID exists"))
+		fmt.Println(errors.New("No connection with this UUID exists: " + workerUUID))
+		return
 	}
 
 	// Send message in new thread
@@ -154,6 +155,12 @@ func (cm *connectionManager) listen(workerUUID string, c *connection) {
 		message, err := readMessage(buffer)
 		if err != nil {
 			fmt.Println(err.Error())
+		}
+
+		// If the message is close, sever the websocket
+		if message.metadata.MessageType == MessageClose {
+			cm.RemoveConnection(workerUUID)
+			continue
 		}
 
 		// Notifying all subscribers

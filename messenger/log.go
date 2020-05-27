@@ -13,9 +13,9 @@ type messengerLog struct {
 // RoundTrip represents a request response pair
 // TODO This might not encapsulate all possible messaging patterns, a more general graph based structure might be needed
 type RoundTrip struct {
-	requestID string
-	request   *Message
-	response  *Message
+	RequestID string
+	Request   *Message
+	Response  *Message
 }
 
 // Create a new instance of a messenger log
@@ -29,11 +29,11 @@ func newMessengerLog() *messengerLog {
 
 // Duration gets the total duration of a request
 func (rt *RoundTrip) Duration() (*time.Duration, error) {
-	if rt.request == nil || rt.response == nil {
+	if rt.Request == nil || rt.Response == nil {
 		return nil, errors.New("RoundTrip struct incomplete")
 	}
-	t1, err1 := time.Parse(time.StampMilli, rt.response.metadata.Timestamp)
-	t2, err2 := time.Parse(time.StampMilli, rt.request.metadata.Timestamp)
+	t1, err1 := time.Parse(time.StampMilli, rt.Response.metadata.Timestamp)
+	t2, err2 := time.Parse(time.StampMilli, rt.Request.metadata.Timestamp)
 	if err1 != nil {
 		return nil, err1
 	}
@@ -55,15 +55,15 @@ func (ml *messengerLog) OnReceive(topic string, message *Message) {
 	rt, ok := ml.openRequests[message.metadata.Request]
 	if ok == true {
 		// Complete round trip
-		rt.response = message
-		ml.completedRequests[rt.requestID] = rt
-		delete(ml.openRequests, rt.requestID)
+		rt.Response = message
+		ml.completedRequests[rt.RequestID] = rt
+		delete(ml.openRequests, rt.RequestID)
 	} else {
 		// Otherwise create new request
 		rt = new(RoundTrip)
-		rt.requestID = message.metadata.Request
-		rt.request = message
-		ml.openRequests[rt.requestID] = rt
+		rt.RequestID = message.metadata.Request
+		rt.Request = message
+		ml.openRequests[rt.RequestID] = rt
 	}
 }
 
@@ -73,15 +73,15 @@ func (ml *messengerLog) OnSend(topic string, message *Message) {
 	rt, ok := ml.openRequests[message.metadata.Request]
 	if ok == true {
 		// Complete round trip
-		rt.response = message
-		ml.completedRequests[rt.requestID] = rt
-		delete(ml.openRequests, rt.requestID)
+		rt.Response = message
+		ml.completedRequests[rt.RequestID] = rt
+		delete(ml.openRequests, rt.RequestID)
 	} else {
 		// Otherwise create new request
 		rt = new(RoundTrip)
-		rt.requestID = message.metadata.Request
-		rt.request = message
-		ml.openRequests[rt.requestID] = rt
+		rt.RequestID = message.metadata.Request
+		rt.Request = message
+		ml.openRequests[rt.RequestID] = rt
 	}
 }
 

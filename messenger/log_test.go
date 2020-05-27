@@ -18,10 +18,10 @@ func TestStartRoundtrip(t *testing.T) {
 	if ok == false {
 		t.Error("New roundtrip is missing")
 	}
-	if rt.request == nil {
+	if rt.Request == nil {
 		t.Error("Request should be filled")
 	}
-	if rt.response != nil {
+	if rt.Response != nil {
 		t.Error("Response should be nil")
 	}
 
@@ -33,10 +33,10 @@ func TestStartRoundtrip(t *testing.T) {
 	m, _ = mb.NewMessage("new-message", "request-id").Done()
 	ps.publishReceived("new-topic", m)
 	rt, ok = l.completedRequests["request-id"]
-	if rt.request == nil {
+	if rt.Request == nil {
 		t.Error("Request should be filled")
 	}
-	if rt.response == nil {
+	if rt.Response == nil {
 		t.Error("Response should be filled")
 	}
 
@@ -64,10 +64,10 @@ func TestEndRoundtrip(t *testing.T) {
 	m, _ := mb.NewMessage("new-message", "request-id").Done()
 	ps.publishReceived("new-topic", m)
 	rt, ok := l.openRequests["request-id"]
-	if rt.request == nil {
+	if rt.Request == nil {
 		t.Error("Request should be filled")
 	}
-	if rt.response != nil {
+	if rt.Response != nil {
 		t.Error("Response should be missing")
 	}
 
@@ -79,10 +79,10 @@ func TestEndRoundtrip(t *testing.T) {
 	if ok == false {
 		t.Error("New roundtrip is missing")
 	}
-	if rt.request == nil {
+	if rt.Request == nil {
 		t.Error("Request should be filled")
 	}
-	if rt.response == nil {
+	if rt.Response == nil {
 		t.Error("Response should be filled")
 	}
 
