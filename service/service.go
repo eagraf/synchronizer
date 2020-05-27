@@ -169,6 +169,10 @@ func getServiceDesc(serviceType string) *grpc.ServiceDesc {
 
 // Helper for starting RPC server
 func startRPCServer(service *Service, rpcHandler interface{}) error {
+	// If rpcHandler is nil, do nothing
+	if rpcHandler == nil {
+		return nil
+	}
 	listener, err := net.Listen("tcp", ":"+strconv.Itoa(service.RPCPort))
 	if err != nil {
 		return err
