@@ -5,7 +5,6 @@ import (
 
 	"github.com/eagraf/synchronizer/messenger"
 	"github.com/eagraf/synchronizer/service"
-	"github.com/google/uuid"
 )
 
 const (
@@ -52,38 +51,6 @@ func newSelector(si service.ServiceInitiator) (*Selector, error) {
 
 	// Return selector
 	return s, nil
-}
-
-func (s *Selector) sendRegistrationResponse() {
-
-}
-
-func (s *Selector) sendHealthCheck(workerUUID string) error {
-	// Send the health check message
-	mb := new(messenger.MessageBuilder)
-	requestID := uuid.New().String()
-	m, err := mb.NewMessage(MessageHealthCheck, requestID).Done()
-	if err != nil {
-		return err
-	}
-	s.messenger.Send(workerUUID, m)
-
-	// Timeout waits in a new thread
-	go func() {
-		time.Sleep(HealthCheckTimeout)
-
-		// Check if timeout was successful
-		rt := s.messenger.GetRequestRoundTrip(requestID)
-		if rt != nil && rt.Response != nil {
-			s.workers[workerUUID].Healthy = true
-		}
-		s.workers[workerUUID].Healthy = false
-	}()
-	return nil
-}
-
-func (s *Selector) sendHandoff() {
-
 }
 
 func (s *Selector) getWorker(workerUUID string) (*Worker, bool) {
