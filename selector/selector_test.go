@@ -2,7 +2,6 @@ package selector
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 	"reflect"
@@ -206,11 +205,10 @@ func TestRPCGetWorkers(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	workers, err := c.GetWorkers(ctx, &service.WorkersRequest{})
+	_, err = c.GetWorkers(ctx, &service.WorkersRequest{})
 	if err != nil {
 		t.Errorf("could not greet: %v", err)
 	}
-	fmt.Println(workers)
 
 	tc1.Close()
 	tc2.Close()

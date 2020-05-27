@@ -40,7 +40,9 @@ func newSelector(si service.ServiceInitiator) (*Selector, error) {
 		messenger: messenger.NewMessenger(),
 	}
 
-	rpcHandler := RPCService{}
+	rpcHandler := RPCService{
+		selector: s,
+	}
 	apiHandler := registerRoutes(s)
 
 	service, err := si.StartService("Selector", rpcHandler, apiHandler)
