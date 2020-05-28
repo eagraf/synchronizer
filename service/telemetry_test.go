@@ -1,6 +1,7 @@
 package service
 
 import (
+	fmt "fmt"
 	"reflect"
 	"testing"
 )
@@ -37,7 +38,7 @@ func TestAllPeersOfType(t *testing.T) {
 func TestRPCRequest(t *testing.T) {
 	topology := make(map[string]map[string]bool)
 	topology["Test"] = map[string]bool{"Test": true}
-	sp = NewServicePool(2100, topology)
+	sp = NewServicePool(3000, topology)
 
 	// Create new TestService
 	t1, err := createTestServerImpl(sp)
@@ -73,5 +74,62 @@ func TestRPCRequest(t *testing.T) {
 			t.Error("Expected an error")
 		}
 	}
+}
 
+func TestMultiCast(t *testing.T) {
+	topology := make(map[string]map[string]bool)
+	topology["Test"] = map[string]bool{"Test": true}
+	sp = NewServicePool(3010, topology)
+
+	// Create new TestService
+	_, err := createTestServerImpl(sp)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	_, err = createTestServerImpl(sp)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	_, err = createTestServerImpl(sp)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	t4, err := createTestServerImpl(sp)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	sp.ConnectService(t4)
+
+	replys := make([]interface{}, 4)
+	for i := range replys {
+		replys[i] = &Pong{}
+	}
+	peers, _ := t4.AllPeersOfType("Test")
+	responses, errs := t4.MultiCast(peers, "/testservice.Test/TestRPC", &Ping{Message: "Hello"}, replys)
+	if len(errs) != 0 {
+		t.Error(errs[0].Error())
+	}
+	if len(responses) != 4 {
+		t.Error("Incorrect number of responses")
+	}
+	if responses[0].(*Pong).Message != "Hello" {
+		t.Error("Incorrect response messsage value")
+	}
+	fmt.Println(responses)
+
+	for i := range replys {
+		replys[i] = &Pong{}
+	}
+	// Test errors
+	responses, errs = t4.MultiCast(peers, "bad_method", &Ping{Message: "Hello"}, replys)
+	if len(errs) != 4 {
+		t.Errorf("Incorrect number of errors: %d", len(errs))
+	}
+	if len(responses) != 4 {
+		t.Error("Incorrect responses length")
+	}
+	if _, isErr := responses[0].(error); isErr == false {
+		t.Errorf("Response is not of type error: %v", reflect.TypeOf(responses[0]))
+	}
+	fmt.Println(responses)
 }
