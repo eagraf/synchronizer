@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/eagraf/synchronizer/messenger"
 	"github.com/eagraf/synchronizer/selector"
 	"github.com/eagraf/synchronizer/service"
 )
@@ -70,22 +69,4 @@ func TestMultiCast(t *testing.T) {
 		t.Error("Incorrect number of responses")
 	}
 	fmt.Printf("Response %v\n", *(responses[0].(*service.WorkersResponse)))
-}
-
-func TestGetWorkersFromSelectors(t *testing.T) {
-	sp := service.NewServicePool(5000, service.DefaultTopology)
-	selector.NewSelector(sp)
-	selector.NewSelector(sp)
-	selector.NewSelector(sp)
-
-	messenger.NewTestClient("http://localhost:5000/websocket/", "client1")
-	messenger.NewTestClient("http://localhost:5002/websocket/", "client2")
-	messenger.NewTestClient("http://localhost:5004/websocket/", "client3")
-
-	c, _ := NewCoordinator(sp)
-	time.Sleep(time.Second)
-	if len(c.workers) != 3 {
-		t.Errorf("Incorrect number of workers %d", len(c.workers))
-	}
-
 }

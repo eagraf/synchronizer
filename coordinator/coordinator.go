@@ -41,6 +41,11 @@ func NewCoordinator(si service.ServiceInitiator) (*Coordinator, error) {
 	return c, nil
 }
 
+// Workers gets the list of workers scheduled in this interval
+func (c *Coordinator) Workers() []*service.WorkersResponse_Worker {
+	return c.workers
+}
+
 func (c *Coordinator) schedulingInterval() {
 	for {
 		c.round++
