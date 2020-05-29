@@ -56,6 +56,11 @@ func (c *Connection) RPCRequest(method string, args, reply interface{}) chan int
 func (s *Service) MultiCast(targets ConnectionSet, method string, args interface{}, replys []interface{}) ([]interface{}, []error) {
 	// TODO add timeout
 
+	// Return immediately if len is 0
+	if len(targets) == 0 {
+		return nil, []error{errors.New("No target services provided")}
+	}
+
 	// Make requests to each service
 	// Uses reflec.SelectCase to handle dynamic selects
 	responseChans := make([]reflect.SelectCase, len(targets))
