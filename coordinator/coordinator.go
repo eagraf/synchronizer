@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/eagraf/synchronizer/service"
@@ -51,31 +52,10 @@ func (c *Coordinator) schedulingInterval() {
 		c.round++
 
 		// Step 1: collect workers from selectors
-		//workerSet := make([]*service.WorkersResponse_Worker, 0)
-
-		selectors, err := c.service.AllPeersOfType("Selector")
+		workers, err := c.getWorkers()
 		if err != nil {
-			// There are no selectors therefore nothing to schedule
-			return
-		}
-
-		replys := make([]interface{}, len(selectors))
-		for i := range replys {
-			replys[i] = &service.WorkersResponse{}
-		}
-		req := &service.WorkersRequest{
-			All:    true,
-			Number: 0,
-		}
-		responses, errs := c.service.MultiCast(selectors, service.SelectorGetWorkers, req, replys)
-		if len(errs) != 0 {
-
-		}
-
-		// Aggregate the responses
-		workers := make([]*service.WorkersResponse_Worker, 0)
-		for _, r := range responses {
-			workers = append(workers, r.(*service.WorkersResponse).Workers...)
+			// Ignore errors for now
+			// TODO some sort of error handling. Check health of selectors?
 		}
 		c.workers = workers
 
@@ -87,4 +67,36 @@ func (c *Coordinator) schedulingInterval() {
 		// Step 4: wait for the next scheduling period
 		time.Sleep(c.interval)
 	}
+}
+
+func (c *Coordinator) getWorkers() ([]*service.WorkersResponse_Worker, error) {
+	selectors, err := c.service.AllPeersOfType("Selector")
+	if err != nil {
+		// There are no selectors therefore nothing to schedule
+		return []*service.WorkersResponse_Worker{}, nil
+	}
+
+	replys := make([]interface{}, len(selectors))
+	for i := range replys {
+		replys[i] = &service.WorkersResponse{}
+	}
+	req := &service.WorkersRequest{
+		All: true,
+	}
+	// Make the multicast request
+	responses, errs := c.service.MultiCast(selectors, service.SelectorGetWorkers, req, replys)
+	err = nil
+	if len(errs) != 0 {
+		err = fmt.Errorf("There were %d errors returned by GetWorkers MultiCast, the first is %s", len(errs), errs[0].Error())
+	}
+
+	// Aggregate the responses
+	workers := make([]*service.WorkersResponse_Worker, 0)
+	for _, r := range responses {
+		if wr, ok := r.(*service.WorkersResponse); ok == true {
+			// Only include workers that are not errors
+			workers = append(workers, wr.Workers...)
+		}
+	}
+	return workers, err
 }

@@ -1,11 +1,9 @@
 package coordinator
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
-	"github.com/eagraf/synchronizer/selector"
 	"github.com/eagraf/synchronizer/service"
 )
 
@@ -41,32 +39,4 @@ func TestStartCoordinator(t *testing.T) {
 
 func TestSchedule(t *testing.T) {
 
-}
-
-// Not really necessary anymore... eh
-func TestMultiCast(t *testing.T) {
-	sp := service.NewServicePool(4010, service.DefaultTopology)
-	selector.NewSelector(sp)
-	selector.NewSelector(sp)
-	selector.NewSelector(sp)
-	c, _ := NewCoordinator(sp)
-
-	replys := make([]interface{}, 4)
-	for i := range replys {
-		replys[i] = &service.WorkersResponse{}
-	}
-	peers, _ := c.service.AllPeersOfType("Selector")
-	fmt.Println(len(peers))
-	req := &service.WorkersRequest{
-		All:    true,
-		Number: 0,
-	}
-	responses, errs := c.service.MultiCast(peers, service.SelectorGetWorkers, req, replys)
-	if len(errs) != 0 {
-		t.Error(errs[0].Error())
-	}
-	if len(responses) != 4 {
-		t.Error("Incorrect number of responses")
-	}
-	fmt.Printf("Response %v\n", *(responses[0].(*service.WorkersResponse)))
 }
