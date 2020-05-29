@@ -57,8 +57,8 @@ var DefaultTopology map[string]map[string]bool = map[string]map[string]bool{
 	"Test": {
 		"Test": true,
 	},
-	"Selector": {
-		"Coordinator": true,
+	"Coordinator": {
+		"Selector": true,
 	},
 }
 
