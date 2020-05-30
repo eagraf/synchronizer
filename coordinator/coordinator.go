@@ -2,6 +2,7 @@ package coordinator
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/eagraf/synchronizer/service"
@@ -16,6 +17,7 @@ type Coordinator struct {
 	workers    []*service.WorkersResponse_Worker // Helpful for tests
 	activeJobs map[string]*MapReduceJob
 	taskQueue  []*Task
+	jobMutex   sync.Mutex
 }
 
 // NewCoordinator creates a new coordinator service
@@ -26,6 +28,7 @@ func NewCoordinator(si service.ServiceInitiator) (*Coordinator, error) {
 		round:      0,
 		activeJobs: make(map[string]*MapReduceJob),
 		taskQueue:  make([]*Task, 0, 1<<20), // Give a rather large initial capacity
+		jobMutex:   sync.Mutex{},
 	}
 
 	// Setup service

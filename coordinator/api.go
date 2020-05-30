@@ -39,7 +39,7 @@ type MapReduceJobRequest struct {
 }
 
 type MapReduceJobResponse struct {
-	JobUUID    string `json"jobUUID"`
+	JobUUID    string `json:"jobUUID"`
 	JobType    string `json:"jobType"`
 	TaskSize   int    `json:"taskSize"`
 	TaskNumber int    `json:"taskNumber"`
@@ -69,6 +69,7 @@ func (c *Coordinator) createMapReduceJob(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Break the job into task components, and add to coordinators task queue
+	c.jobMutex.Lock()
 	for i := 0; i < body.TaskNumber; i++ {
 		newTask := &Task{
 			TaskIndex: i,
@@ -78,8 +79,8 @@ func (c *Coordinator) createMapReduceJob(w http.ResponseWriter, r *http.Request)
 		job.Tasks[i] = newTask
 		c.taskQueue = append(c.taskQueue, newTask)
 	}
-
 	c.activeJobs[job.JobUUID] = job
+	c.jobMutex.Unlock()
 
 	// Marshal the job into a response
 	res, err := json.Marshal(job)
