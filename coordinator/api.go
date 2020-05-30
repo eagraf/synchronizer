@@ -18,26 +18,14 @@ func registerRoutes(c *Coordinator) http.Handler {
 	return r
 }
 
-type MapReduceJob struct {
-	JobUUID    string  `json"jobUUID"`
-	JobType    string  `json:"jobType"`
-	TaskSize   int     `json:"taskSize"`
-	TaskNumber int     `json:"taskNumber"`
-	Tasks      []*Task `json:"tasks"`
-}
-
-type Task struct {
-	JobUUID   string `json:"jobUUID"`
-	TaskIndex int    `json:"taskIndex"`
-	TaskSize  int    `json:"taskSize"`
-}
-
+// MapReduceJobRequest represents the body of an API call to make a new MapReduceJob
 type MapReduceJobRequest struct {
 	JobType    string `json:"jobType"`
 	TaskSize   int    `json:"taskSize"`
 	TaskNumber int    `json:"taskNumber"`
 }
 
+// MapReduceJobResponse contains some info on a newly created job
 type MapReduceJobResponse struct {
 	JobUUID    string `json:"jobUUID"`
 	JobType    string `json:"jobType"`
