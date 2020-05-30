@@ -26,7 +26,10 @@ func TestCreateMapReduceRequest(t *testing.T) {
 	}
 
 	// Pass mock request into api call
-	c := Coordinator{}
+	c := Coordinator{
+		activeJobs: make(map[string]*MapReduceJob),
+		taskQueue:  make([]*Task, 0, 1<<20), // Give a rather large initial capacity
+	}
 	writer := httptest.NewRecorder()
 	c.createMapReduceJob(writer, request)
 
@@ -36,5 +39,22 @@ func TestCreateMapReduceRequest(t *testing.T) {
 	}
 
 	// Check coordinator state afterward
+	if len(c.taskQueue) != 1000 {
+		t.Errorf("Coordinator task queue is not len 1000: %d ", len(c.taskQueue))
+	}
+	if len(c.activeJobs) != 1 {
+		t.Errorf("Coordinator does not have the right number of active jobs %d", len(c.activeJobs))
+	}
 
+	// Check response body
+	buf := writer.Body.Bytes()
+	var res MapReduceJobResponse
+	err = json.Unmarshal(buf, &res)
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	if len(res.JobUUID) != 36 {
+		t.Error("Invalid UUID")
+	}
 }

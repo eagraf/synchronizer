@@ -9,19 +9,23 @@ import (
 
 // Coordinator service struct
 type Coordinator struct {
-	service   *service.Service
-	interval  time.Duration
-	scheduler Scheduler
-	round     uint
-	workers   []*service.WorkersResponse_Worker // Helpful for tests
+	service    *service.Service
+	interval   time.Duration
+	scheduler  Scheduler
+	round      uint
+	workers    []*service.WorkersResponse_Worker // Helpful for tests
+	activeJobs map[string]*MapReduceJob
+	taskQueue  []*Task
 }
 
 // NewCoordinator creates a new coordinator service
 func NewCoordinator(si service.ServiceInitiator) (*Coordinator, error) {
 	// Create new Coordinator
 	var c *Coordinator = &Coordinator{
-		interval: 10 * time.Second,
-		round:    0,
+		interval:   10 * time.Second,
+		round:      0,
+		activeJobs: make(map[string]*MapReduceJob),
+		taskQueue:  make([]*Task, 0, 1<<20), // Give a rather large initial capacity
 	}
 
 	// Setup service

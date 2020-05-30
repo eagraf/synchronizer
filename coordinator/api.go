@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi"
+	"github.com/google/uuid"
 )
 
 // RegisterRoutes defines routes for REST API using the chi router
@@ -18,6 +19,7 @@ func registerRoutes(c *Coordinator) http.Handler {
 }
 
 type MapReduceJob struct {
+	JobUUID    string  `json"jobUUID"`
 	JobType    string  `json:"jobType"`
 	TaskSize   int     `json:"taskSize"`
 	TaskNumber int     `json:"taskNumber"`
@@ -25,11 +27,19 @@ type MapReduceJob struct {
 }
 
 type Task struct {
-	TaskIndex int `json:"taskIndex"`
-	TaskSize  int `json:"taskSize"`
+	JobUUID   string `json:"jobUUID"`
+	TaskIndex int    `json:"taskIndex"`
+	TaskSize  int    `json:"taskSize"`
 }
 
 type MapReduceJobRequest struct {
+	JobType    string `json:"jobType"`
+	TaskSize   int    `json:"taskSize"`
+	TaskNumber int    `json:"taskNumber"`
+}
+
+type MapReduceJobResponse struct {
+	JobUUID    string `json"jobUUID"`
 	JobType    string `json:"jobType"`
 	TaskSize   int    `json:"taskSize"`
 	TaskNumber int    `json:"taskNumber"`
@@ -49,6 +59,33 @@ func (c *Coordinator) createMapReduceJob(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "Incorrect fields in input", 400)
 	}
 
-	// Generate subtasks
-	w.Write([]byte("hello"))
+	// Add a new active job
+	job := &MapReduceJob{
+		JobUUID:    uuid.New().String(),
+		JobType:    body.JobType,
+		TaskNumber: body.TaskNumber,
+		TaskSize:   body.TaskSize,
+		Tasks:      make([]*Task, body.TaskNumber),
+	}
+
+	// Break the job into task components, and add to coordinators task queue
+	for i := 0; i < body.TaskNumber; i++ {
+		newTask := &Task{
+			TaskIndex: i,
+			TaskSize:  body.TaskSize,
+		}
+
+		job.Tasks[i] = newTask
+		c.taskQueue = append(c.taskQueue, newTask)
+	}
+
+	c.activeJobs[job.JobUUID] = job
+
+	// Marshal the job into a response
+	res, err := json.Marshal(job)
+	if err != nil {
+		http.Error(w, "Failed to generate response json", 500)
+	}
+	// Write the response
+	w.Write(res)
 }
