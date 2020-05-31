@@ -1,7 +1,14 @@
 package coordinator
 
-type Scheduler interface {
-	Schedule()
+import "github.com/eagraf/synchronizer/service"
+
+type scheduler interface {
+	// TODO schedule needs to return list of unscheduled workers
+	schedule(taskQueue []*Task, workerQueue []*service.WorkersResponse_Worker) *schedule
+}
+
+type schedule struct {
+	assignments map[string]map[string][]int // Key 1: Worker, Key 2: Job, Index: Task index
 }
 
 // MapReduceJob is a basic job where tasks are easilly subdivided and distributed to workers
@@ -21,5 +28,29 @@ type Task struct {
 }
 
 func (c *Coordinator) schedule() {
-	// Unimplimented
+	// Assign tasks to workers
+	c.scheduler.schedule(c.taskQueue, c.workers)
+	// Task assignments need to be allocated to data servers and aggregators
+}
+
+type naiveScheduler struct{}
+
+func (ns *naiveScheduler) schedule(taskQueue []*Task, workerQueue []*service.WorkersResponse_Worker) *schedule {
+	res := &schedule{
+		assignments: make(map[string]map[string][]int),
+	}
+	for i, task := range taskQueue {
+		worker := workerQueue[i%len(workerQueue)]
+
+		if _, ok := res.assignments[worker.WorkerUUID]; ok == false {
+			res.assignments[worker.WorkerUUID] = make(map[string][]int)
+		}
+		if _, ok := res.assignments[worker.WorkerUUID][task.JobUUID]; ok == false {
+			res.assignments[worker.WorkerUUID][task.JobUUID] = make([]int, 0)
+		}
+
+		taskList := res.assignments[worker.WorkerUUID][task.JobUUID]
+		taskList = append(taskList, task.TaskIndex)
+	}
+	return res
 }

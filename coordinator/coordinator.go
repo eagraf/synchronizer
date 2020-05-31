@@ -12,7 +12,7 @@ import (
 type Coordinator struct {
 	service    *service.Service
 	interval   time.Duration
-	scheduler  Scheduler
+	scheduler  scheduler
 	round      uint
 	workers    []*service.WorkersResponse_Worker // Helpful for tests
 	activeJobs map[string]*MapReduceJob
