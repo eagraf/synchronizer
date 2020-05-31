@@ -1,6 +1,8 @@
 package coordinator
 
-import "github.com/eagraf/synchronizer/service"
+import (
+	"github.com/eagraf/synchronizer/service"
+)
 
 type scheduler interface {
 	// TODO schedule needs to return list of unscheduled workers
@@ -8,7 +10,8 @@ type scheduler interface {
 }
 
 type schedule struct {
-	assignments map[string]map[string][]int // Key 1: Worker, Key 2: Job, Index: Task index
+	assignments       map[string]map[string][]int // Key 1: Worker, Key 2: Job, Index: Task index
+	unassignedWorkers map[string]bool
 }
 
 // MapReduceJob is a basic job where tasks are easilly subdivided and distributed to workers
@@ -37,7 +40,8 @@ type naiveScheduler struct{}
 
 func (ns *naiveScheduler) schedule(taskQueue []*Task, workerQueue []*service.WorkersResponse_Worker) *schedule {
 	res := &schedule{
-		assignments: make(map[string]map[string][]int),
+		assignments:       make(map[string]map[string][]int),
+		unassignedWorkers: make(map[string]bool),
 	}
 	for i, task := range taskQueue {
 		worker := workerQueue[i%len(workerQueue)]
@@ -49,8 +53,12 @@ func (ns *naiveScheduler) schedule(taskQueue []*Task, workerQueue []*service.Wor
 			res.assignments[worker.WorkerUUID][task.JobUUID] = make([]int, 0)
 		}
 
-		taskList := res.assignments[worker.WorkerUUID][task.JobUUID]
-		taskList = append(taskList, task.TaskIndex)
+		res.assignments[worker.WorkerUUID][task.JobUUID] = append(res.assignments[worker.WorkerUUID][task.JobUUID], task.TaskIndex)
+	}
+
+	// Populate unassigned workers
+	for i := len(taskQueue); i < len(workerQueue); i++ {
+		res.unassignedWorkers[workerQueue[i].WorkerUUID] = true
 	}
 	return res
 }
