@@ -5,13 +5,33 @@ import (
 )
 
 type scheduler interface {
-	// TODO schedule needs to return list of unscheduled workers
-	schedule(taskQueue []*Task, workerQueue []*service.WorkersResponse_Worker) *schedule
+	scheduleWorkers(taskQueue []*Task, workerQueue []*service.WorkersResponse_Worker) *workerSchedule
+	scheduleduleDataServers(jobs []*MapReduceJob, ds []*dataServer) dataServerSchedule
+	scheduleAggregator(wa *workerAssignments, ag []*aggregator) aggregatorSchedule
 }
 
-type schedule struct {
-	assignments       map[string]map[string][]int // Key 1: Worker, Key 2: Job, Index: Task index
+type workerAssignments = map[string]map[string][]int // Key 1: Worker, Key 2: Job, Index: Task index
+
+type workerSchedule struct {
+	assignments       workerAssignments
 	unassignedWorkers map[string]bool
+}
+
+type dataServerSchedule struct {
+	assignments map[string][]string // Map of data server ids, list of jobUUIDs
+}
+
+type aggregatorSchedule struct {
+	assignments map[string]*workerAssignments
+}
+
+// Helper types that contain important scheduling information
+type dataServer struct {
+	UUID string
+}
+
+type aggregator struct {
+	UUID string
 }
 
 // MapReduceJob is a basic job where tasks are easilly subdivided and distributed to workers
@@ -32,14 +52,17 @@ type Task struct {
 
 func (c *Coordinator) schedule() {
 	// Assign tasks to workers
-	c.scheduler.schedule(c.taskQueue, c.workers)
+	c.scheduler.scheduleWorkers(c.taskQueue, c.workers)
+	// Clear taskQueue and workers
+	c.taskQueue = nil
+	c.workers = nil
 	// Task assignments need to be allocated to data servers and aggregators
 }
 
 type naiveScheduler struct{}
 
-func (ns *naiveScheduler) schedule(taskQueue []*Task, workerQueue []*service.WorkersResponse_Worker) *schedule {
-	res := &schedule{
+func (ns *naiveScheduler) scheduleWorkers(taskQueue []*Task, workerQueue []*service.WorkersResponse_Worker) *workerSchedule {
+	res := &workerSchedule{
 		assignments:       make(map[string]map[string][]int),
 		unassignedWorkers: make(map[string]bool),
 	}
@@ -61,4 +84,25 @@ func (ns *naiveScheduler) schedule(taskQueue []*Task, workerQueue []*service.Wor
 		res.unassignedWorkers[workerQueue[i].WorkerUUID] = true
 	}
 	return res
+}
+
+func (ns *naiveScheduler) scheduleDataServers(jobs []*MapReduceJob, dataServers []*dataServer) *dataServerSchedule {
+	res := &dataServerSchedule{
+		assignments: make(map[string][]string),
+	}
+
+	// Initialize each data server in assignments map
+	for _, ds := range dataServers {
+		res.assignments[ds.UUID] = make([]string, 0)
+	}
+	// Populate assignments
+	for i, job := range jobs {
+		dsUUID := dataServers[i%len(dataServers)].UUID
+		res.assignments[dsUUID] = append(res.assignments[dsUUID], job.JobUUID)
+	}
+	return res
+}
+
+func (ns *naiveScheduler) scheduleAggregators(wa *workerAssignments, ag []*aggregator) *aggregatorSchedule {
+	return nil
 }

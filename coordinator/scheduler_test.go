@@ -27,7 +27,7 @@ func TestNaiveSchedulerEqual(t *testing.T) {
 	}
 
 	ns := naiveScheduler{}
-	sched := ns.schedule(taskQueue, workerQueue)
+	sched := ns.scheduleWorkers(taskQueue, workerQueue)
 
 	for workerUUID, worker := range sched.assignments {
 		if len(worker) != 1 {
@@ -58,7 +58,7 @@ func TestNaiveSchedulerMoreTasks(t *testing.T) {
 	}
 
 	ns := naiveScheduler{}
-	sched := ns.schedule(taskQueue, workerQueue)
+	sched := ns.scheduleWorkers(taskQueue, workerQueue)
 
 	if len(sched.assignments["1"]) != 3 {
 		t.Error("Incorrect number of tasks assigned to first worker")
@@ -83,7 +83,7 @@ func TestNaiveSchedulerMoreWorkers(t *testing.T) {
 	}
 
 	ns := naiveScheduler{}
-	sched := ns.schedule(taskQueue, workerQueue)
+	sched := ns.scheduleWorkers(taskQueue, workerQueue)
 
 	if len(sched.assignments["1"]) != 1 {
 		t.Error("Incorrect number of assignments for worker 1")
@@ -94,5 +94,33 @@ func TestNaiveSchedulerMoreWorkers(t *testing.T) {
 	if len(sched.unassignedWorkers) != 2 {
 		t.Error("Incorrect number of unassigned workers")
 	}
+}
 
+func TestNaiveScheduleDataServers(t *testing.T) {
+	jobs := []*MapReduceJob{
+		{JobType: "1"},
+		{JobType: "2"},
+		{JobType: "3"},
+		{JobType: "4"},
+		{JobType: "5"},
+	}
+
+	ds := []*dataServer{
+		{UUID: "1"},
+		{UUID: "2"},
+		{UUID: "3"},
+	}
+
+	ns := naiveScheduler{}
+	sched := ns.scheduleDataServers(jobs, ds)
+
+	if len(sched.assignments) != 3 {
+		t.Errorf("Incorrect number of assignments: %d", len(sched.assignments))
+	}
+	if len(sched.assignments["1"]) != 2 {
+		t.Error("DataServer 1 has incorrect number of assignments")
+	}
+	if len(sched.assignments["3"]) != 1 {
+		t.Error("DataServer 2 has incorrect number of assignments")
+	}
 }
