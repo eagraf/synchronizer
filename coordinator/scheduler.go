@@ -6,8 +6,8 @@ import (
 
 type scheduler interface {
 	scheduleWorkers(taskQueue []*Task, workerQueue []*service.WorkersResponse_Worker) *workerSchedule
-	scheduleduleDataServers(jobs []*MapReduceJob, ds []*dataServer) dataServerSchedule
-	scheduleAggregator(wa *workerAssignments, ag []*aggregator) aggregatorSchedule
+	scheduleduleDataServers(jobs []*MapReduceJob, dataServers []*dataServer) *dataServerSchedule
+	scheduleAggregator(jobs []*MapReduceJob, aggregators []*aggregator) *aggregatorSchedule
 }
 
 type workerAssignments = map[string]map[string][]int // Key 1: Worker, Key 2: Job, Index: Task index
@@ -22,7 +22,7 @@ type dataServerSchedule struct {
 }
 
 type aggregatorSchedule struct {
-	assignments map[string]*workerAssignments
+	assignments map[string][]string // Map of data server ids, list of jobUUIDs
 }
 
 // Helper types that contain important scheduling information
@@ -103,6 +103,20 @@ func (ns *naiveScheduler) scheduleDataServers(jobs []*MapReduceJob, dataServers 
 	return res
 }
 
-func (ns *naiveScheduler) scheduleAggregators(wa *workerAssignments, ag []*aggregator) *aggregatorSchedule {
-	return nil
+func (ns *naiveScheduler) scheduleAggregators(jobs []*MapReduceJob, aggregators []*aggregator) *aggregatorSchedule {
+	res := &aggregatorSchedule{
+		assignments: make(map[string][]string),
+	}
+
+	// Initialize each data server in assignments map
+	for _, ds := range aggregators {
+		res.assignments[ds.UUID] = make([]string, 0)
+	}
+	// Populate assignments
+	for i, job := range jobs {
+		agUUID := aggregators[i%len(aggregators)].UUID
+		res.assignments[agUUID] = append(res.assignments[agUUID], job.JobUUID)
+	}
+	return res
+
 }

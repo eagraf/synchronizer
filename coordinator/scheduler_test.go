@@ -124,3 +124,31 @@ func TestNaiveScheduleDataServers(t *testing.T) {
 		t.Error("DataServer 2 has incorrect number of assignments")
 	}
 }
+func TestNaiveScheduleAggregators(t *testing.T) {
+	jobs := []*MapReduceJob{
+		{JobType: "1"},
+		{JobType: "2"},
+		{JobType: "3"},
+		{JobType: "4"},
+		{JobType: "5"},
+	}
+
+	ag := []*aggregator{
+		{UUID: "1"},
+		{UUID: "2"},
+		{UUID: "3"},
+	}
+
+	ns := naiveScheduler{}
+	sched := ns.scheduleAggregators(jobs, ag)
+
+	if len(sched.assignments) != 3 {
+		t.Errorf("Incorrect number of assignments: %d", len(sched.assignments))
+	}
+	if len(sched.assignments["1"]) != 2 {
+		t.Error("DataServer 1 has incorrect number of assignments")
+	}
+	if len(sched.assignments["3"]) != 1 {
+		t.Error("DataServer 2 has incorrect number of assignments")
+	}
+}
