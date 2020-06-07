@@ -25,5 +25,6 @@ func TestCoordinatorGetWorkersFromSelectors(t *testing.T) {
 	if len(c.Workers()) != 3 {
 		t.Errorf("Incorrect number of workers %d", len(c.Workers()))
 	}
-
 }
+
+// TODO func TestCoordinatorSchedule()

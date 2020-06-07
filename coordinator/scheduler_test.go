@@ -106,9 +106,9 @@ func TestNaiveScheduleDataServers(t *testing.T) {
 	}
 
 	ds := []*dataServer{
-		{UUID: "1"},
-		{UUID: "2"},
-		{UUID: "3"},
+		{ID: "1"},
+		{ID: "2"},
+		{ID: "3"},
 	}
 
 	ns := naiveScheduler{}
@@ -134,9 +134,9 @@ func TestNaiveScheduleAggregators(t *testing.T) {
 	}
 
 	ag := []*aggregator{
-		{UUID: "1"},
-		{UUID: "2"},
-		{UUID: "3"},
+		{ID: "1"},
+		{ID: "2"},
+		{ID: "3"},
 	}
 
 	ns := naiveScheduler{}

@@ -17,6 +17,7 @@ import (
 type ConnectionSet map[string]*Connection
 
 // AllPeersOfType returns a map of all connected services of a given type
+// TODO interfacing with telemetry should just use service IDs for simplicity??
 func (s *Service) AllPeersOfType(serviceType string) (ConnectionSet, error) {
 	if ps, ok := s.peers[serviceType]; ok == true {
 		return ps, nil
