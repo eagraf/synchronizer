@@ -3,7 +3,11 @@ package main
 import (
 	"context"
 	"net/http"
+	"time"
 
+	"github.com/eagraf/synchronizer/coordinator"
+	"github.com/eagraf/synchronizer/messenger"
+	"github.com/eagraf/synchronizer/selector"
 	"github.com/eagraf/synchronizer/service"
 	"google.golang.org/grpc"
 )
@@ -24,33 +28,17 @@ func testEndpoint(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	/*fmt.Println("Starting synchronizer")
+	sp := service.NewServicePool(4000, service.DefaultTopology)
+	selector.NewSelector(sp)
+	selector.NewSelector(sp)
+	selector.NewSelector(sp)
+	coordinator.NewCoordinator(sp)
 
-	var taskRegistry map[string]tasks.TaskType = make(map[string]tasks.TaskType, 0)
-	taskRegistry["GOL"] = gameoflife.GOLTaskType
+	time.Sleep(5 * time.Second)
 
-	messenger.InitializeMessenger()
+	messenger.NewTestClient("http://localhost:4000/websocket/", "client1")
+	messenger.NewTestClient("http://localhost:4002/websocket/", "client2")
+	messenger.NewTestClient("http://localhost:4004/websocket/", "client3")
+	select {}
 
-	wm := workers.GetWorkerManager()
-	wm.Start()
-
-	//	_ = tasks.Start(taskRegistry, wm.MapTaskQueue)
-
-	r := RegisterRoutes()
-	log.Fatal(http.ListenAndServe(":2216", r))*/
-
-	topology := make(map[string]map[string]bool)
-	topology["Test"] = map[string]bool{"Test": true}
-	_ = service.NewServicePool(topology)
-
-	// Create new TestService
-	/*rpc := TestServerImpl{}
-	API := chi.NewRouter()
-	API.Route("/test", func(r chi.Router) {
-		API.Get("/", testEndpoint)
-	})
-	_, err := sp.StartService("Test", rpc, API)
-	if err != nil {
-		fmt.Println("fuck")
-	}*/
 }

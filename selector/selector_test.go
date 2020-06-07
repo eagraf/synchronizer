@@ -23,8 +23,8 @@ var rpcURL string
 func TestMain(m *testing.M) {
 	var _ service.SelectorServer = (*RPCService)(nil)
 
-	sp := service.NewServicePool(service.DefaultTopology)
-	s, err := newSelector(sp)
+	sp := service.NewServicePool(2200, service.DefaultTopology)
+	s, err := NewSelector(sp)
 	if err != nil {
 		// Server failed to start
 		os.Exit(-1)

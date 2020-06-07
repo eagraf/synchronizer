@@ -44,7 +44,7 @@ var sp *ServicePool
 func TestMain(m *testing.M) {
 	topology := make(map[string]map[string]bool)
 	topology["Test"] = map[string]bool{"Test": true}
-	sp = NewServicePool(topology)
+	sp = NewServicePool(2000, topology)
 
 	// Create new TestService
 	_, err := createTestServerImpl(sp)
@@ -103,25 +103,25 @@ func TestConnect(t *testing.T) {
 	if err != nil {
 		t.Error("Connect should not cause an error: " + err.Error())
 	}
-	if len(s1.Peers["Test"]) != 1 {
+	if len(s1.peers["Test"]) != 1 {
 		t.Error("Incorrect number of peers for service 1")
 	}
-	if len(s2.Peers["Test"]) != 0 {
+	if len(s2.peers["Test"]) != 0 {
 		t.Error("Incorrect number of peers for service 2")
 	}
 	err = connect(s2, s1)
 	if err != nil {
 		t.Error("Connect should not cause an error")
 	}
-	if len(s1.Peers["Test"]) != 1 {
+	if len(s1.peers["Test"]) != 1 {
 		t.Error("Incorrect number of peers for service 1")
 	}
-	if len(s2.Peers["Test"]) != 1 {
+	if len(s2.peers["Test"]) != 1 {
 		t.Error("Incorrect number of peers for service 2")
 	}
 	// Test sending message over connection
 	// Use gRPC invoke
-	cc := s1.Peers["Test"][s2.ID].ClientConn
+	cc := s1.peers["Test"][s2.ID].ClientConn
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	reply := Pong{}
@@ -151,11 +151,11 @@ func TestConnectServices(t *testing.T) {
 	sp.ConnectService(s1)
 
 	// Based off the topology, s2 should now have a connection to s1
-	if len(s2.Peers["Test"]) != 1 {
+	if len(s2.peers["Test"]) != 1 {
 		t.Error("Failed to connect second service to first one")
 	}
 
-	if len(s1.Peers["Test"]) != beforeCount {
+	if len(s1.peers["Test"]) != beforeCount {
 		t.Error("Service 1 did not connect to all peers")
 	}
 }

@@ -20,8 +20,8 @@ type Service struct {
 	IP          net.IP
 	APIPort     int
 	RPCPort     int
-	Peers       map[string]map[string]*Connection // Telemetry. Key1: Service Type, Key2: Service ID
 	RPCService  interface{}
+	peers       map[string]map[string]*Connection // Telemetry. Key1: Service Type, Key2: Service ID
 }
 
 // Connection represents a link between two services
@@ -45,8 +45,9 @@ type ServiceInitiator interface {
 type ServicePool struct {
 	// Implements ServiceInitiator
 	// For development use only
-	portCount int // Helper variable to keep track of unassigned ports
-	topology  map[string]map[string]bool
+	portCount   int // Helper variable to keep track of unassigned ports
+	initialPort int
+	topology    map[string]map[string]bool
 	//	Scale     scale                          // Number of each type of service
 	Pool map[string]map[string]*Service // Map of all services
 }
@@ -56,16 +57,17 @@ var DefaultTopology map[string]map[string]bool = map[string]map[string]bool{
 	"Test": {
 		"Test": true,
 	},
-	"Selector": {
-		"Coordinator": true,
+	"Coordinator": {
+		"Selector": true,
 	},
 }
 
 // NewServicePool creates a new ServicePool object
-func NewServicePool(top map[string]map[string]bool) *ServicePool {
+func NewServicePool(initialPort int, top map[string]map[string]bool) *ServicePool {
 	sp := &ServicePool{
-		portCount: 0,
-		topology:  top, // Key 1: Origin Service, Key 2: Receiving Service, Value: There is a link
+		portCount:   0,
+		initialPort: initialPort,
+		topology:    top, // Key 1: Origin Service, Key 2: Receiving Service, Value: There is a link
 		//Scale:     scale{},
 		Pool: make(map[string]map[string]*Service),
 	}
@@ -90,9 +92,9 @@ func (sp *ServicePool) StartService(serviceType string, rpcHandler interface{}, 
 		ID:          serviceType + " " + string(len(sp.Pool[serviceType])),
 		IP:          net.IPv4(127, 0, 0, 1),
 		ServiceType: serviceType,
-		APIPort:     2000 + sp.portCount,
-		RPCPort:     2001 + sp.portCount,
-		Peers:       make(map[string]map[string]*Connection),
+		APIPort:     sp.initialPort + sp.portCount,
+		RPCPort:     sp.initialPort + sp.portCount + 1,
+		peers:       make(map[string]map[string]*Connection),
 	}
 	// Update portCount
 	sp.portCount += 2
@@ -147,11 +149,11 @@ func connect(source *Service, dest *Service) error {
 	}
 
 	// Create new map if needed for the service type
-	if _, ok := source.Peers[dest.ServiceType]; ok == false {
-		source.Peers[dest.ServiceType] = make(map[string]*Connection)
+	if _, ok := source.peers[dest.ServiceType]; ok == false {
+		source.peers[dest.ServiceType] = make(map[string]*Connection)
 	}
 
-	source.Peers[dest.ServiceType][dest.ID] = c
+	source.peers[dest.ServiceType][dest.ID] = c
 	return nil
 }
 
@@ -169,6 +171,10 @@ func getServiceDesc(serviceType string) *grpc.ServiceDesc {
 
 // Helper for starting RPC server
 func startRPCServer(service *Service, rpcHandler interface{}) error {
+	// If rpcHandler is nil, do nothing
+	if rpcHandler == nil {
+		return nil
+	}
 	listener, err := net.Listen("tcp", ":"+strconv.Itoa(service.RPCPort))
 	if err != nil {
 		return err

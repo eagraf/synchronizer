@@ -33,7 +33,8 @@ type Worker struct {
 	Disconnected bool
 }
 
-func newSelector(si service.ServiceInitiator) (*Selector, error) {
+// NewSelector creates a new selector service
+func NewSelector(si service.ServiceInitiator) (*Selector, error) {
 	// Initialize selector
 	var s *Selector = &Selector{
 		workers:   make(map[string]*Worker),
