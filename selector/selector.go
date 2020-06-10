@@ -7,6 +7,7 @@ import (
 	"github.com/eagraf/synchronizer/service"
 )
 
+// TODO maybe move these methods into the messenger class to keep global track of registered message types
 const (
 	// MessageRegistrationResponse is a message type identifier for selector registration responses
 	MessageRegistrationResponse string = "selector_registration_response"
