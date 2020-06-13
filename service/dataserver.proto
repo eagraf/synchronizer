@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+option go_package = "github.com/eagraf/synchronizer/service";
+option java_multiple_files = true;
+option java_package = "com.github.eagraf.synchronizer.service";
+option java_outer_classname = "DataServerService";
+
+package dataserverservice;
+
+service DataServerService{
+  rpc ReceiveSchedule(ReceiveScheduleRequest) returns (ReceiveScheduleResponse) {}
+  // TODO feedback to coordinator when it is ready for more work
+}
+
+// Contains info on jobs and workers assigned to this data server
+message ReceiveScheduleRequest {
+  message Schedule {
+    message Job {
+      string JobUUID = 1;
+      string JobType = 2;
+      int32 TaskSize = 3;
+      int32 TaskNumber = 4;
+    }
+    message Worker {
+      message Task {
+        string JobUUID = 1;
+        int32 TaskIndex = 2;
+        int32 TaskSize = 3;
+      }
+      string workerUUID = 1;
+      string deviceType = 2;
+      repeated Task tasks = 3;
+    }
+  }
+}
+
+// Empty response for now
+message ReceiveScheduleResponse {}
