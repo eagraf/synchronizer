@@ -164,6 +164,8 @@ func getServiceDesc(serviceType string) *grpc.ServiceDesc {
 		return &_Test_serviceDesc
 	case "Selector":
 		return &_Selector_serviceDesc
+	case "Data_Server":
+		return &_DataServerService_serviceDesc
 	default:
 		return nil
 	}

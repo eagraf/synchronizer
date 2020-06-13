@@ -8,7 +8,7 @@ option java_outer_classname = "DataServerService";
 package dataserverservice;
 
 service DataServerService{
-  rpc ReceiveSchedule(ReceiveScheduleRequest) returns (ReceiveScheduleRequest) {}
+  rpc ReceiveSchedule(ReceiveScheduleRequest) returns (ReceiveScheduleResponse) {}
   // TODO feedback to coordinator when it is ready for more work
 }
 

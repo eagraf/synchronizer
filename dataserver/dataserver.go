@@ -29,5 +29,14 @@ func NewDataServer(si service.ServiceInitiator) (*DataServer, error) {
 		workers:   make(map[string]*Worker),
 		messenger: messenger.NewMessenger(),
 	}
+	// Setup service
+	rpcHandler := RPCService{dataServer: ds}
+	apiHandler := registerRoutes(ds)
+	service, err := si.StartService("Data_Server", rpcHandler, apiHandler)
+	if err != nil {
+		return nil, err
+	}
+
+	ds.service = service
 	return ds, nil
 }
