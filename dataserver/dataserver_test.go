@@ -66,7 +66,7 @@ func TestNewDataServer(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	_, err = c.ReceiveSchedule(ctx, &service.ReceiveScheduleRequest{})
+	_, err = c.DataServerReceiveSchedule(ctx, &service.DataServerReceiveScheduleRequest{})
 	if err != nil {
 		t.Errorf("could not greet: %v", err)
 	}

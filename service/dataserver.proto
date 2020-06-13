@@ -8,12 +8,12 @@ option java_outer_classname = "DataServerService";
 package dataserverservice;
 
 service DataServerService{
-  rpc ReceiveSchedule(ReceiveScheduleRequest) returns (ReceiveScheduleResponse) {}
+  rpc DataServerReceiveSchedule(DataServerReceiveScheduleRequest) returns (DataServerReceiveScheduleResponse) {}
   // TODO feedback to coordinator when it is ready for more work
 }
 
 // Contains info on jobs and workers assigned to this data server
-message ReceiveScheduleRequest {
+message DataServerReceiveScheduleRequest {
   message Schedule {
     message Job {
       string JobUUID = 1;
@@ -31,8 +31,10 @@ message ReceiveScheduleRequest {
       string deviceType = 2;
       repeated Task tasks = 3;
     }
+    repeated Job jobs = 1;
+    repeated Worker workers = 2;
   }
 }
 
 // Empty response for now
-message ReceiveScheduleResponse {}
+message DataServerReceiveScheduleResponse {}

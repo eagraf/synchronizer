@@ -3,17 +3,17 @@ syntax = "proto3";
 option go_package = "github.com/eagraf/synchronizer/service";
 option java_multiple_files = true;
 option java_package = "com.github.eagraf.synchronizer.service";
-option java_outer_classname = "DataServerService";
+option java_outer_classname = "AggregatorService";
 
-package dataserverservice;
+package aggregatorservice;
 
-service DataServerService{
-  rpc ReceiveSchedule(ReceiveScheduleRequest) returns (ReceiveScheduleResponse) {}
+service Aggregator {
+  rpc ReceiveSchedule(AggregatorReceiveScheduleRequest) returns (AggregatorReceiveScheduleResponse) {}
   // TODO feedback to coordinator when it is ready for more work
 }
 
 // Contains info on jobs and workers assigned to this data server
-message ReceiveScheduleRequest {
+message AggregatorReceiveScheduleRequest {
   message Schedule {
     message Job {
       string JobUUID = 1;
@@ -37,4 +37,4 @@ message ReceiveScheduleRequest {
 }
 
 // Empty response for now
-message ReceiveScheduleResponse {}
+message AggregatorReceiveScheduleResponse {}
