@@ -1,4 +1,4 @@
-package dataserver
+package aggregator
 
 import (
 	"context"
@@ -15,37 +15,37 @@ import (
 )
 
 // Selector global variable
-var globalDataServer *DataServer
+var globalAggregator *Aggregator
 var apiURL string
 var rpcURL string
 
 // Setup common server for all tests to use
 func TestMain(m *testing.M) {
-	var _ service.DataServerServiceServer = (*RPCService)(nil)
+	var _ service.AggregatorServer = (*RPCService)(nil)
 
 	sp := service.NewServicePool(2400, service.DefaultTopology)
-	ds, err := NewDataServer(sp)
+	a, err := NewAggregator(sp)
 	if err != nil {
 		// Server failed to start
 		os.Exit(-1)
 	}
-	globalDataServer = ds
-	apiURL = "http://localhost:" + strconv.Itoa(globalDataServer.service.APIPort)
-	rpcURL = "localhost:" + strconv.Itoa(globalDataServer.service.RPCPort)
+	globalAggregator = a
+	apiURL = "http://localhost:" + strconv.Itoa(globalAggregator.service.APIPort)
+	rpcURL = "localhost:" + strconv.Itoa(globalAggregator.service.RPCPort)
 	os.Exit(m.Run())
 }
 
 func TestRPCServerImplementation(t *testing.T) {
-	var _ service.DataServerServiceServer = (*RPCService)(nil)
+	var _ service.AggregatorServer = (*RPCService)(nil)
 
 	rs := RPCService{}
 	st := reflect.TypeOf(rs)
-	if !st.Implements(reflect.TypeOf((*service.DataServerServiceServer)(nil)).Elem()) {
+	if !st.Implements(reflect.TypeOf((*service.AggregatorServer)(nil)).Elem()) {
 		t.Error("Interface fails to implement SelectorServer")
 	}
 }
 
-func TestNewDataServer(t *testing.T) {
+func TestNewAggregator(t *testing.T) {
 	// Test that external API started
 	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
@@ -62,11 +62,11 @@ func TestNewDataServer(t *testing.T) {
 		t.Errorf("did not connect: %v", err)
 	}
 	defer conn.Close()
-	c := service.NewDataServerServiceClient(conn)
+	c := service.NewAggregatorClient(conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	_, err = c.DataServerReceiveSchedule(ctx, &service.DataServerReceiveScheduleRequest{})
+	_, err = c.ReceiveSchedule(ctx, &service.AggregatorReceiveScheduleRequest{})
 	if err != nil {
 		t.Errorf("could not greet: %v", err)
 	}
@@ -95,7 +95,7 @@ func TestWorkerRegistration(t *testing.T) {
 		t.Error("id not valid UUID")
 	}
 	// Test workers map
-	if len(globalDataServer.workers) != 1 {
+	if len(globalAggregator.workers) != 1 {
 		t.Error("Incorrect number of workers")
 	}
 
