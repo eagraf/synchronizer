@@ -34,6 +34,7 @@ message DataServerReceiveScheduleRequest {
     repeated Job jobs = 1;
     repeated Worker workers = 2;
   }
+  Schedule schedule = 1;
 }
 
 // Empty response for now
