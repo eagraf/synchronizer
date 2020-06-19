@@ -1,6 +1,8 @@
 package coordinator
 
 import (
+	"sync"
+
 	"github.com/eagraf/synchronizer/service"
 )
 
@@ -118,7 +120,14 @@ type dsSchedule = service.DataServerReceiveScheduleRequest_Schedule
 type dsScheduleJob = service.DataServerReceiveScheduleRequest_Schedule_Job
 type dsScheduleWorker = service.DataServerReceiveScheduleRequest_Schedule_Worker
 
-func (c *Coordinator) sendToDataServers(schedule *dataServerSchedule) {
+func (c *Coordinator) sendToDataServers(schedule *dataServerSchedule) []error {
+	// Return list of errors
+	errs := make([]error, len(schedule.assignments))
+
+	// Use waitgroup to block until all requests have completed
+	var wg sync.WaitGroup
+
+	index := 0
 	for ds, jobs := range schedule.assignments {
 		// Make request
 		req := &dsScheduleRequest{}
@@ -137,9 +146,27 @@ func (c *Coordinator) sendToDataServers(schedule *dataServerSchedule) {
 			}
 		}
 		// Send to dataserver
+		dsConn, err := c.service.GetPeer("DataServer", ds)
+		if err != nil {
+			errs[index] = err
+		}
+		reply := service.DataServerReceiveScheduleResponse{}
+		// Make request with callback
+		c.service.UniCast(dsConn, service.DataServerReceiveSchedule, req, &reply, func(reply interface{}, err error) {
+			// Add each call thread to waitgroup, and then remove when done
+			wg.Add(1)
+			defer wg.Done()
 
+			if err != nil {
+				errs[index] = err
+			}
+		})
+
+		index++
 	}
-
+	// Wait for all calls to complete
+	wg.Wait()
+	return errs
 }
 
 func sendToAggregators(as *aggregatorSchedule) {
