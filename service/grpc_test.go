@@ -1,6 +1,7 @@
 package service
 
 import (
+	fmt "fmt"
 	"reflect"
 	"testing"
 )
@@ -75,10 +76,55 @@ func TestRPCRequest(t *testing.T) {
 	}
 }
 
-func TestMultiCast(t *testing.T) {
+func TestUniCast(t *testing.T) {
 	topology := make(map[string]map[string]bool)
 	topology["Test"] = map[string]bool{"Test": true}
 	sp = NewServicePool(3010, topology)
+
+	// Create new TestService
+	_, err := createTestServerImpl(sp)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	t2, err := createTestServerImpl(sp)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	sp.ConnectService(t2)
+
+	closureTest := 0
+
+	reply := Pong{}
+	conn := t2.peers["Test"]["Test-1"]
+	fmt.Println(conn)
+	t2.UniCast(conn, "/testservice.Test/TestRPC", &Ping{Message: "Hello"}, &reply, func(reply interface{}, err error) {
+		closureTest++
+		if closureTest != 1 {
+			t.Error("Closure test failed")
+		}
+		if reply.(*Pong).Message != "Hello" {
+			t.Error("Incorrect response messsage value")
+		}
+	})
+
+	// Test bad method
+	reply = Pong{}
+	fmt.Println(conn)
+	t2.UniCast(conn, "bad method", &Ping{Message: "Hello"}, &reply, func(reply interface{}, err error) {
+		if reply != nil {
+			t.Error("reply should be nil")
+		}
+		if err == nil {
+			t.Error("err should not be nil")
+		}
+	})
+
+}
+
+func TestMultiCast(t *testing.T) {
+	topology := make(map[string]map[string]bool)
+	topology["Test"] = map[string]bool{"Test": true}
+	sp = NewServicePool(3020, topology)
 
 	// Create new TestService
 	_, err := createTestServerImpl(sp)

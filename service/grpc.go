@@ -52,6 +52,21 @@ func (c *Connection) RPCRequest(method string, args, reply interface{}) chan int
 	return replyChannel
 }
 
+// UniCast provides non blocking send with basic callback capabilities
+func (s *Service) UniCast(c *Connection, method string, args, reply interface{}, callback func(interface{}, error)) {
+	replyChan := c.RPCRequest(method, args, reply)
+	select {
+	case response := <-replyChan:
+		// Check for error
+		value := reflect.ValueOf(response)
+		if _, isErr := value.Interface().(error); isErr == true {
+			callback(nil, response.(error))
+		} else {
+			callback(response, nil)
+		}
+	}
+}
+
 // MultiCast sends an identical gRPC request to multiple services concurrently, blocking until all have returned
 // This is a blocking call
 // Each service should be of the same type
@@ -65,7 +80,7 @@ func (s *Service) MultiCast(targets ConnectionSet, method string, args interface
 	}
 
 	// Make requests to each service
-	// Uses reflec.SelectCase to handle dynamic selects
+	// Uses reflec.SelectCase to handle dynamic selects, making it easy to wait concurrently for each
 	responseChans := make([]reflect.SelectCase, len(targets))
 	i := 0
 	for _, t := range targets {

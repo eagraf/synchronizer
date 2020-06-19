@@ -107,3 +107,41 @@ func (c *Coordinator) schedule() *schedule {
 	res.aggregatorSchedule = *as
 	return res
 }
+
+// TODO later
+func sendToSelectors() {
+
+}
+
+type dsScheduleRequest = service.DataServerReceiveScheduleRequest
+type dsSchedule = service.DataServerReceiveScheduleRequest_Schedule
+type dsScheduleJob = service.DataServerReceiveScheduleRequest_Schedule_Job
+type dsScheduleWorker = service.DataServerReceiveScheduleRequest_Schedule_Worker
+
+func (c *Coordinator) sendToDataServers(schedule *dataServerSchedule) {
+	for ds, jobs := range schedule.assignments {
+		// Make request
+		req := &dsScheduleRequest{}
+		sched := &dsSchedule{
+			Jobs: make([]*dsScheduleJob, len(jobs)),
+		}
+		req.Schedule = sched
+
+		// Fill in jobs
+		for i, job := range jobs {
+			sched.Jobs[i] = &dsScheduleJob{
+				JobUUID:    c.activeJobs[job].JobUUID,
+				JobType:    c.activeJobs[job].JobType,
+				TaskSize:   int32(c.activeJobs[job].TaskSize),
+				TaskNumber: int32(c.activeJobs[job].TaskNumber),
+			}
+		}
+		// Send to dataserver
+
+	}
+
+}
+
+func sendToAggregators(as *aggregatorSchedule) {
+
+}

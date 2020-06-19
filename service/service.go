@@ -1,6 +1,7 @@
 package service
 
 import (
+	fmt "fmt"
 	"net"
 	"net/http"
 	"strconv"
@@ -89,13 +90,14 @@ func (sp *ServicePool) StartService(serviceType string, rpcHandler interface{}, 
 
 	// Create Service
 	service := &Service{
-		ID:          serviceType + " " + string(len(sp.Pool[serviceType])),
+		ID:          serviceType + "-" + strconv.Itoa(len(sp.Pool[serviceType])), // TODO this needs to be based off of an incrementing counter (currently breaks when the service count goes down)
 		IP:          net.IPv4(127, 0, 0, 1),
 		ServiceType: serviceType,
 		APIPort:     sp.initialPort + sp.portCount,
 		RPCPort:     sp.initialPort + sp.portCount + 1,
 		peers:       make(map[string]map[string]*Connection),
 	}
+	fmt.Println(service.ID)
 	// Update portCount
 	sp.portCount += 2
 	// Update the service pool
