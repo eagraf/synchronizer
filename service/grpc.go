@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+// This file contains wrapper and helper functions for gRPC related tasks for services
+
 /*
  * Provide helper methods for services to identify the correct peers to communicate with
  * when state is involved.

@@ -1,7 +1,6 @@
 package service
 
 import (
-	fmt "fmt"
 	"reflect"
 	"testing"
 )
@@ -115,7 +114,6 @@ func TestMultiCast(t *testing.T) {
 	if responses[0].(*Pong).Message != "Hello" {
 		t.Error("Incorrect response messsage value")
 	}
-	fmt.Println(responses)
 
 	for i := range replys {
 		replys[i] = &Pong{}
@@ -131,5 +129,4 @@ func TestMultiCast(t *testing.T) {
 	if _, isErr := responses[0].(error); isErr == false {
 		t.Errorf("Response is not of type error: %v", reflect.TypeOf(responses[0]))
 	}
-	fmt.Println(responses)
 }
