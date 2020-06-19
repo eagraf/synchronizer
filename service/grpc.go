@@ -18,6 +18,17 @@ import (
 // ConnectionSet represents a set of active connections that the service is maintaining
 type ConnectionSet map[string]*Connection
 
+// GetPeer gets a single peer connection given an id
+func (s *Service) GetPeer(serviceType string, id string) (*Connection, error) {
+	if _, ok := s.peers[serviceType]; ok == false {
+		return nil, fmt.Errorf("No service of type %s connected", serviceType)
+	}
+	if _, ok := s.peers[serviceType][id]; ok == false {
+		return nil, fmt.Errorf("No service with ID %s found", id)
+	}
+	return s.peers[serviceType][id], nil
+}
+
 // AllPeersOfType returns a map of all connected services of a given type
 // TODO interfacing with telemetry should just use service IDs for simplicity??
 func (s *Service) AllPeersOfType(serviceType string) (ConnectionSet, error) {

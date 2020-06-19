@@ -6,6 +6,37 @@ import (
 	"testing"
 )
 
+func TestGetPeer(t *testing.T) {
+	s := &Service{
+		peers: make(map[string]map[string]*Connection),
+	}
+	s.peers["service1"] = map[string]*Connection{
+		"peer1": {
+			nil,
+			nil,
+		},
+		"peer2": {
+			nil,
+			nil,
+		},
+	}
+
+	_, err := s.GetPeer("service1", "peer1")
+	if err != nil {
+		t.Error("Did not expect an error")
+	}
+
+	_, err = s.GetPeer("blah", "peer1")
+	if err == nil {
+		t.Error("Expected an error")
+	}
+
+	_, err = s.GetPeer("service1", "blah")
+	if err == nil {
+		t.Error("Expected an error")
+	}
+}
+
 func TestAllPeersOfType(t *testing.T) {
 	// Dummy service
 	s := &Service{
