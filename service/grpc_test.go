@@ -127,7 +127,6 @@ func TestUniCast(t *testing.T) {
 
 	reply := Pong{}
 	conn := t2.peers["Test"]["Test-1"]
-	fmt.Println(conn)
 	t2.UniCast(conn, "/testservice.Test/TestRPC", &Ping{Message: "Hello"}, &reply, func(reply interface{}, err error) {
 		closureTest++
 		if closureTest != 1 {
