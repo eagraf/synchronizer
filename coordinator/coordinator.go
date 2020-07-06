@@ -25,6 +25,7 @@ func NewCoordinator(si service.ServiceInitiator) (*Coordinator, error) {
 	// Create new Coordinator
 	var c *Coordinator = &Coordinator{
 		interval:   10 * time.Second,
+		scheduler:  &naiveScheduler{},
 		round:      0,
 		activeJobs: make(map[string]*MapReduceJob),
 		taskQueue:  make([]*Task, 0, 1<<20), // Give a rather large initial capacity

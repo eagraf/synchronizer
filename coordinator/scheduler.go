@@ -8,7 +8,7 @@ import (
 
 type scheduler interface {
 	scheduleWorkers(taskQueue []*Task, workerQueue []*service.WorkersResponse_Worker) *workerSchedule
-	scheduleduleDataServers(jobs []*MapReduceJob, dataServers []*dataServer) *dataServerSchedule
+	scheduleDataServers(jobs []*MapReduceJob, dataServers []*dataServer) *dataServerSchedule
 	scheduleAggregators(jobs []*MapReduceJob, aggregators []*aggregator) *aggregatorSchedule
 }
 
@@ -88,7 +88,7 @@ func (c *Coordinator) schedule() *schedule {
 		i++
 	}
 	// Schedule data servers
-	dss := c.scheduler.scheduleduleDataServers(jobs, dataServers)
+	dss := c.scheduler.scheduleDataServers(jobs, dataServers)
 
 	aggregatorConnections, err := c.service.AllPeersOfType("Aggregator")
 	if err != nil {
