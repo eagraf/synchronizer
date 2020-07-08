@@ -106,5 +106,6 @@ func (c *Coordinator) getWorkers() ([]*service.WorkersResponse_Worker, error) {
 			workers = append(workers, wr.Workers...)
 		}
 	}
+	c.service.Log("GetWorkersRecv", fmt.Sprintf("Receiving %d workers from %d selectors", len(workers), len(responses)))
 	return workers, err
 }

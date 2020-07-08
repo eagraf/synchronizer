@@ -1,6 +1,7 @@
 package service
 
 import (
+	fmt "fmt"
 	"io"
 	"strings"
 	"time"
@@ -39,4 +40,30 @@ func (lw *LogWriter) Write(p []byte) (n int, err error) {
 // Log in a standard format for service
 func (s *Service) Log(tag string, message string) {
 	s.Logger.Printf("%s %s (%s): %s", time.Now().String(), s.ID, tag, message)
+}
+
+// Helpers for writing tests
+
+// CountTags counts the number of a given tag in the log store
+// Only works with servicePool implementation for now
+func CountTags(sp *ServicePool, tag string) int {
+	if tags, ok := sp.logStore.tags[tag]; ok == true {
+		return len(tags)
+	}
+	return 0
+}
+
+// LogExists finds if a log body with the given tag exists
+func LogExists(sp *ServicePool, tag string, expectedBody string) bool {
+	if tags, ok := sp.logStore.tags[tag]; ok == true {
+		for _, entry := range tags {
+			// Split on the body of the log entry
+			body := strings.SplitAfterN(entry, ":", 4)[3]
+			fmt.Println(body)
+			if body[1:len(body)-1] == expectedBody {
+				return true
+			}
+		}
+	}
+	return false
 }

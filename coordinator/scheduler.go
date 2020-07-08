@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/eagraf/synchronizer/service"
@@ -59,6 +60,7 @@ type Task struct {
 }
 
 func (c *Coordinator) schedule() *schedule {
+	fmt.Println("Schedule!")
 	res := new(schedule)
 
 	// Assign tasks to workers
@@ -74,11 +76,11 @@ func (c *Coordinator) schedule() *schedule {
 		jobs[i] = j
 		i++
 	}
-
 	// Task assignments need to be allocated to data servers and aggregators
 	dataServerConnections, err := c.service.AllPeersOfType("Data Server")
 	if err != nil {
 		// Handle somehow
+		fmt.Println("error!")
 	}
 	// Map connections into dataserver struct
 	dataServers := make([]*dataServer, len(dataServerConnections))
@@ -93,6 +95,7 @@ func (c *Coordinator) schedule() *schedule {
 	aggregatorConnections, err := c.service.AllPeersOfType("Aggregator")
 	if err != nil {
 		// Log it?
+		fmt.Println("error!")
 	}
 	// Map connections into aggregator struct
 	aggregators := make([]*aggregator, len(aggregatorConnections))
@@ -108,6 +111,7 @@ func (c *Coordinator) schedule() *schedule {
 	res.dataServerSchedule = *dss
 	res.aggregatorSchedule = *as
 	return res
+	return nil
 }
 
 // TODO later
