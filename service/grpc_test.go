@@ -1,7 +1,6 @@
 package service
 
 import (
-	fmt "fmt"
 	"reflect"
 	"testing"
 )
@@ -139,7 +138,6 @@ func TestUniCast(t *testing.T) {
 
 	// Test bad method
 	reply = Pong{}
-	fmt.Println(conn)
 	t2.UniCast(conn, "bad method", &Ping{Message: "Hello"}, &reply, func(reply interface{}, err error) {
 		if reply != nil {
 			t.Error("reply should be nil")

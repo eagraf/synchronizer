@@ -1,8 +1,10 @@
 package service
 
 import (
+	"log"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 )
 
@@ -15,16 +17,27 @@ type ServicePool struct {
 	portCount   int // Helper variable to keep track of unassigned ports
 	initialPort int
 	topology    map[string]map[string]bool
+	logStore    *LogWriter
+	Logger      *log.Logger
 	//	Scale     scale                          // Number of each type of service
 	Pool map[string]map[string]*Service // Map of all services
 }
 
 // NewServicePool creates a new ServicePool object
 func NewServicePool(initialPort int, top map[string]map[string]bool) *ServicePool {
+	// Create logger
+	logWriter := &LogWriter{
+		out:  os.Stdout,
+		tags: make(map[string][]string),
+	}
+
+	logger := log.New(logWriter, "", 0)
 	sp := &ServicePool{
 		portCount:   0,
 		initialPort: initialPort,
 		topology:    top, // Key 1: Origin Service, Key 2: Receiving Service, Value: There is a link
+		logStore:    logWriter,
+		Logger:      logger,
 		//Scale:     scale{},
 		Pool: make(map[string]map[string]*Service),
 	}
@@ -51,6 +64,7 @@ func (sp *ServicePool) StartService(serviceType string, rpcHandler interface{}, 
 		ServiceType: serviceType,
 		APIPort:     sp.initialPort + sp.portCount,
 		RPCPort:     sp.initialPort + sp.portCount + 1,
+		Logger:      sp.Logger,
 		peers:       make(map[string]map[string]*Connection),
 	}
 

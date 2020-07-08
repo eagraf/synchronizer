@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -21,6 +22,7 @@ type Service struct {
 	APIPort     int
 	RPCPort     int
 	RPCService  interface{}
+	Logger      *log.Logger
 	peers       map[string]map[string]*Connection // Telemetry. Key1: Service Type, Key2: Service ID
 }
 
