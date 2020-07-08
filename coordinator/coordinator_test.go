@@ -30,7 +30,7 @@ func TestStartCoordinator(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-	time.Sleep(2 * c.interval) // A little more than one interval
+	time.Sleep(c.interval + time.Second) // A little more than one interval
 	// Two intervals should have passed
 	if c.round != 2 {
 		t.Errorf("Wrong number of rounds: %d", c.round)

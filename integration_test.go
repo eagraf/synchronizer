@@ -20,10 +20,17 @@ func TestCoordinatorGetWorkersFromSelectors(t *testing.T) {
 	messenger.NewTestClient("http://localhost:5002/websocket/", "client2")
 	messenger.NewTestClient("http://localhost:5004/websocket/", "client3")
 
-	c, _ := coordinator.NewCoordinator(sp)
+	coordinator.NewCoordinator(sp)
 	time.Sleep(time.Second)
-	if len(c.Workers()) != 3 {
-		t.Errorf("Incorrect number of workers %d", len(c.Workers()))
+
+	if count := service.CountTags(sp, "GetWorkersSend"); count != 3 {
+		t.Errorf("Incorrect number of worker sends: %d", count)
+	}
+	if count := service.CountTags(sp, "GetWorkersRecv"); count != 1 {
+		t.Errorf("Incorrect number of worker sends: %d", count)
+	}
+	if exists := service.LogExists(sp, "GetWorkersRecv", "Receiving 3 workers from 3 selectors"); !exists {
+		t.Errorf("Correct receiving log not found")
 	}
 }
 

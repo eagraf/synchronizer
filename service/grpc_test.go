@@ -1,10 +1,40 @@
 package service
 
 import (
-	fmt "fmt"
 	"reflect"
 	"testing"
 )
+
+func TestGetPeer(t *testing.T) {
+	s := &Service{
+		peers: make(map[string]map[string]*Connection),
+	}
+	s.peers["service1"] = map[string]*Connection{
+		"peer1": {
+			nil,
+			nil,
+		},
+		"peer2": {
+			nil,
+			nil,
+		},
+	}
+
+	_, err := s.GetPeer("service1", "peer1")
+	if err != nil {
+		t.Error("Did not expect an error")
+	}
+
+	_, err = s.GetPeer("blah", "peer1")
+	if err == nil {
+		t.Error("Expected an error")
+	}
+
+	_, err = s.GetPeer("service1", "blah")
+	if err == nil {
+		t.Error("Expected an error")
+	}
+}
 
 func TestAllPeersOfType(t *testing.T) {
 	// Dummy service
@@ -76,10 +106,53 @@ func TestRPCRequest(t *testing.T) {
 	}
 }
 
-func TestMultiCast(t *testing.T) {
+func TestUniCast(t *testing.T) {
 	topology := make(map[string]map[string]bool)
 	topology["Test"] = map[string]bool{"Test": true}
 	sp = NewServicePool(3010, topology)
+
+	// Create new TestService
+	_, err := createTestServerImpl(sp)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	t2, err := createTestServerImpl(sp)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	sp.ConnectService(t2)
+
+	closureTest := 0
+
+	reply := Pong{}
+	conn := t2.peers["Test"]["Test-1"]
+	t2.UniCast(conn, "/testservice.Test/TestRPC", &Ping{Message: "Hello"}, &reply, func(reply interface{}, err error) {
+		closureTest++
+		if closureTest != 1 {
+			t.Error("Closure test failed")
+		}
+		if reply.(*Pong).Message != "Hello" {
+			t.Error("Incorrect response messsage value")
+		}
+	})
+
+	// Test bad method
+	reply = Pong{}
+	t2.UniCast(conn, "bad method", &Ping{Message: "Hello"}, &reply, func(reply interface{}, err error) {
+		if reply != nil {
+			t.Error("reply should be nil")
+		}
+		if err == nil {
+			t.Error("err should not be nil")
+		}
+	})
+
+}
+
+func TestMultiCast(t *testing.T) {
+	topology := make(map[string]map[string]bool)
+	topology["Test"] = map[string]bool{"Test": true}
+	sp = NewServicePool(3020, topology)
 
 	// Create new TestService
 	_, err := createTestServerImpl(sp)
@@ -115,7 +188,6 @@ func TestMultiCast(t *testing.T) {
 	if responses[0].(*Pong).Message != "Hello" {
 		t.Error("Incorrect response messsage value")
 	}
-	fmt.Println(responses)
 
 	for i := range replys {
 		replys[i] = &Pong{}
@@ -131,5 +203,4 @@ func TestMultiCast(t *testing.T) {
 	if _, isErr := responses[0].(error); isErr == false {
 		t.Errorf("Response is not of type error: %v", reflect.TypeOf(responses[0]))
 	}
-	fmt.Println(responses)
 }

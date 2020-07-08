@@ -29,6 +29,8 @@ func testEndpoint(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Hello"))
 }
 
+var sp *ServicePool
+
 func createTestServerImpl(sp *ServicePool) (*Service, error) {
 	rpc := TestServerImpl{}
 	apiRouter := chi.NewRouter()
@@ -38,8 +40,6 @@ func createTestServerImpl(sp *ServicePool) (*Service, error) {
 	ts, err := sp.StartService("Test", rpc, apiRouter)
 	return ts, err
 }
-
-var sp *ServicePool
 
 func TestMain(m *testing.M) {
 	topology := make(map[string]map[string]bool)
@@ -158,4 +158,38 @@ func TestConnectServices(t *testing.T) {
 	if len(s1.peers["Test"]) != beforeCount {
 		t.Error("Service 1 did not connect to all peers")
 	}
+}
+
+// Test telemetry
+
+func TestTelemetryLogging(t *testing.T) {
+	s1, err := createTestServerImpl(sp)
+	if err != nil {
+		// Server failed to start
+		t.Error("Failed to start first service")
+	}
+	if s1.Logger == nil {
+		t.Error("Service initiator failed to assign a logger")
+	}
+	s1.Log("NewTag", "Test Logging")
+	if logs, ok := sp.logStore.tags["NewTag"]; ok != false {
+		if len(logs) != 1 {
+			t.Error("Incorrect length for NewTags list")
+		}
+	} else {
+		t.Error("NewTags list never created")
+	}
+	if logs, ok := sp.logStore.tags[s1.ID]; ok != false {
+		if len(logs) != 1 {
+			t.Error("Incorrect length for service tag list")
+		}
+	} else {
+		t.Error("service tag list never created")
+	}
+
+	s1.Log("NewTag", "Test Logging 2")
+	if len(sp.logStore.tags["NewTag"]) != 2 {
+		t.Error("NewTag list not long enough")
+	}
+
 }

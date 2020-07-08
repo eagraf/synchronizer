@@ -2,6 +2,7 @@ package selector
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/eagraf/synchronizer/service"
 )
@@ -13,6 +14,7 @@ type RPCService struct {
 
 // GetWorkers reutrns a list of available workers to the coordinator
 func (rs RPCService) GetWorkers(ctx context.Context, req *service.WorkersRequest) (*service.WorkersResponse, error) {
+	// Issue log
 	// Convert workers into a slice of service.WorkersResponse_Worker
 	workers := make([]*service.WorkersResponse_Worker, 0, len(rs.selector.workers))
 	for _, w := range rs.selector.workers {
@@ -21,6 +23,7 @@ func (rs RPCService) GetWorkers(ctx context.Context, req *service.WorkersRequest
 		}
 		workers = append(workers, wrw)
 	}
+	rs.selector.service.Log("GetWorkersSend", fmt.Sprintf("Sending %d workers", len(rs.selector.workers)))
 	return &service.WorkersResponse{Workers: workers}, nil
 }
 

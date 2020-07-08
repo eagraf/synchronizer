@@ -1,12 +1,15 @@
 package coordinator
 
 import (
+	"fmt"
+	"sync"
+
 	"github.com/eagraf/synchronizer/service"
 )
 
 type scheduler interface {
 	scheduleWorkers(taskQueue []*Task, workerQueue []*service.WorkersResponse_Worker) *workerSchedule
-	scheduleduleDataServers(jobs []*MapReduceJob, dataServers []*dataServer) *dataServerSchedule
+	scheduleDataServers(jobs []*MapReduceJob, dataServers []*dataServer) *dataServerSchedule
 	scheduleAggregators(jobs []*MapReduceJob, aggregators []*aggregator) *aggregatorSchedule
 }
 
@@ -57,6 +60,7 @@ type Task struct {
 }
 
 func (c *Coordinator) schedule() *schedule {
+	fmt.Println("Schedule!")
 	res := new(schedule)
 
 	// Assign tasks to workers
@@ -72,11 +76,11 @@ func (c *Coordinator) schedule() *schedule {
 		jobs[i] = j
 		i++
 	}
-
 	// Task assignments need to be allocated to data servers and aggregators
 	dataServerConnections, err := c.service.AllPeersOfType("Data Server")
 	if err != nil {
 		// Handle somehow
+		fmt.Println("error!")
 	}
 	// Map connections into dataserver struct
 	dataServers := make([]*dataServer, len(dataServerConnections))
@@ -86,11 +90,12 @@ func (c *Coordinator) schedule() *schedule {
 		i++
 	}
 	// Schedule data servers
-	dss := c.scheduler.scheduleduleDataServers(jobs, dataServers)
+	dss := c.scheduler.scheduleDataServers(jobs, dataServers)
 
 	aggregatorConnections, err := c.service.AllPeersOfType("Aggregator")
 	if err != nil {
 		// Log it?
+		fmt.Println("error!")
 	}
 	// Map connections into aggregator struct
 	aggregators := make([]*aggregator, len(aggregatorConnections))
@@ -106,65 +111,68 @@ func (c *Coordinator) schedule() *schedule {
 	res.dataServerSchedule = *dss
 	res.aggregatorSchedule = *as
 	return res
+	return nil
 }
 
-type naiveScheduler struct{}
+// TODO later
+func sendToSelectors() {
 
-func (ns *naiveScheduler) scheduleWorkers(taskQueue []*Task, workerQueue []*service.WorkersResponse_Worker) *workerSchedule {
-	res := &workerSchedule{
-		assignments:       make(map[string]map[string][]int),
-		unassignedWorkers: make(map[string]bool),
-	}
-	for i, task := range taskQueue {
-		worker := workerQueue[i%len(workerQueue)]
+}
 
-		if _, ok := res.assignments[worker.WorkerUUID]; ok == false {
-			res.assignments[worker.WorkerUUID] = make(map[string][]int)
+type dsScheduleRequest = service.DataServerReceiveScheduleRequest
+type dsSchedule = service.DataServerReceiveScheduleRequest_Schedule
+type dsScheduleJob = service.DataServerReceiveScheduleRequest_Schedule_Job
+type dsScheduleWorker = service.DataServerReceiveScheduleRequest_Schedule_Worker
+
+func (c *Coordinator) sendToDataServers(schedule *dataServerSchedule) []error {
+	// Return list of errors
+	errs := make([]error, len(schedule.assignments))
+
+	// Use waitgroup to block until all requests have completed
+	var wg sync.WaitGroup
+
+	index := 0
+	for ds, jobs := range schedule.assignments {
+		// Make request
+		req := &dsScheduleRequest{}
+		sched := &dsSchedule{
+			Jobs: make([]*dsScheduleJob, len(jobs)),
 		}
-		if _, ok := res.assignments[worker.WorkerUUID][task.JobUUID]; ok == false {
-			res.assignments[worker.WorkerUUID][task.JobUUID] = make([]int, 0)
+		req.Schedule = sched
+
+		// Fill in jobs
+		for i, job := range jobs {
+			sched.Jobs[i] = &dsScheduleJob{
+				JobUUID:    c.activeJobs[job].JobUUID,
+				JobType:    c.activeJobs[job].JobType,
+				TaskSize:   int32(c.activeJobs[job].TaskSize),
+				TaskNumber: int32(c.activeJobs[job].TaskNumber),
+			}
 		}
+		// Send to dataserver
+		dsConn, err := c.service.GetPeer("DataServer", ds)
+		if err != nil {
+			errs[index] = err
+		}
+		reply := service.DataServerReceiveScheduleResponse{}
+		// Make request with callback
+		c.service.UniCast(dsConn, service.DataServerReceiveSchedule, req, &reply, func(reply interface{}, err error) {
+			// Add each call thread to waitgroup, and then remove when done
+			wg.Add(1)
+			defer wg.Done()
 
-		res.assignments[worker.WorkerUUID][task.JobUUID] = append(res.assignments[worker.WorkerUUID][task.JobUUID], task.TaskIndex)
-	}
+			if err != nil {
+				errs[index] = err
+			}
+		})
 
-	// Populate unassigned workers
-	for i := len(taskQueue); i < len(workerQueue); i++ {
-		res.unassignedWorkers[workerQueue[i].WorkerUUID] = true
+		index++
 	}
-	return res
+	// Wait for all calls to complete
+	wg.Wait()
+	return errs
 }
 
-func (ns *naiveScheduler) scheduleDataServers(jobs []*MapReduceJob, dataServers []*dataServer) *dataServerSchedule {
-	res := &dataServerSchedule{
-		assignments: make(map[string][]string),
-	}
+func sendToAggregators(as *aggregatorSchedule) {
 
-	// Initialize each data server in assignments map
-	for _, ds := range dataServers {
-		res.assignments[ds.ID] = make([]string, 0)
-	}
-	// Populate assignments
-	for i, job := range jobs {
-		dsUUID := dataServers[i%len(dataServers)].ID
-		res.assignments[dsUUID] = append(res.assignments[dsUUID], job.JobUUID)
-	}
-	return res
-}
-
-func (ns *naiveScheduler) scheduleAggregators(jobs []*MapReduceJob, aggregators []*aggregator) *aggregatorSchedule {
-	res := &aggregatorSchedule{
-		assignments: make(map[string][]string),
-	}
-
-	// Initialize each data server in assignments map
-	for _, ds := range aggregators {
-		res.assignments[ds.ID] = make([]string, 0)
-	}
-	// Populate assignments
-	for i, job := range jobs {
-		agUUID := aggregators[i%len(aggregators)].ID
-		res.assignments[agUUID] = append(res.assignments[agUUID], job.JobUUID)
-	}
-	return res
 }
