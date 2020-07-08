@@ -35,3 +35,6 @@ func TestCoordinatorGetWorkersFromSelectors(t *testing.T) {
 }
 
 // TODO func TestCoordinatorSchedule()
+func TestFail(t *testing.T) {
+	t.Error("Fu!")
+}
