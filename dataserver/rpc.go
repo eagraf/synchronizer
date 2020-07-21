@@ -12,7 +12,8 @@ type RPCService struct {
 }
 
 // DataServerReceiveSchedule handles RPC call from coordinator giving the dataserver a schedule
-func (RPCService) DataServerReceiveSchedule(ctx context.Context, req *service.DataServerReceiveScheduleRequest) (*service.DataServerReceiveScheduleResponse, error) {
+func (rs RPCService) DataServerReceiveSchedule(ctx context.Context, req *service.DataServerReceiveScheduleRequest) (*service.DataServerReceiveScheduleResponse, error) {
+	rs.dataServer.service.Log("DataServerReceiveSchedule", "Receive schedule")
 	//return nil, status.Errorf(codes.Unimplemented, "method ReceiveSchedule not implemented")
 	return &service.DataServerReceiveScheduleResponse{}, nil
 }

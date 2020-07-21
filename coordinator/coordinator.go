@@ -47,6 +47,8 @@ func NewCoordinator(si service.ServiceInitiator) (*Coordinator, error) {
 	// Start the interval timer
 	go c.schedulingInterval()
 
+	service.Log("CoordinatorStarted", "Coordinator successfully started")
+
 	return c, nil
 }
 

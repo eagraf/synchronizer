@@ -12,6 +12,7 @@ type RPCService struct {
 }
 
 // ReceiveSchedule handles RPC call from coordinator giving the aggregator a schedule
-func (RPCService) ReceiveSchedule(ctx context.Context, req *service.AggregatorReceiveScheduleRequest) (*service.AggregatorReceiveScheduleResponse, error) {
+func (rs RPCService) ReceiveSchedule(ctx context.Context, req *service.AggregatorReceiveScheduleRequest) (*service.AggregatorReceiveScheduleResponse, error) {
+	rs.aggregator.service.Log("AggregatorReceiveSchedule", "Receiving schedule")
 	return &service.AggregatorReceiveScheduleResponse{}, nil
 }

@@ -53,6 +53,8 @@ func NewSelector(si service.ServiceInitiator) (*Selector, error) {
 	}
 	s.service = service
 
+	service.Log("SelectorStarted", "Selector successfully started")
+
 	// Return selector
 	return s, nil
 }

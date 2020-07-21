@@ -36,7 +36,12 @@ func NewDataServer(si service.ServiceInitiator) (*DataServer, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	ds.service = service
+
+	// TODO should be refactored out
+	si.ConnectService(service)
+
+	service.Log("DataServerStarted", "Data Server successfully started")
+
 	return ds, nil
 }

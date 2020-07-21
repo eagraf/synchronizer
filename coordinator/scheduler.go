@@ -77,9 +77,9 @@ func (c *Coordinator) schedule() *schedule {
 		i++
 	}
 	// Task assignments need to be allocated to data servers and aggregators
-	dataServerConnections, err := c.service.AllPeersOfType("Data Server")
+	dataServerConnections, err := c.service.AllPeersOfType("Data_Server")
 	if err != nil {
-		// Handle somehow
+		// TODO Handle somehow
 		fmt.Println("error!")
 	}
 	// Map connections into dataserver struct
@@ -94,7 +94,7 @@ func (c *Coordinator) schedule() *schedule {
 
 	aggregatorConnections, err := c.service.AllPeersOfType("Aggregator")
 	if err != nil {
-		// Log it?
+		// TODO Log it?
 		fmt.Println("error!")
 	}
 	// Map connections into aggregator struct
@@ -110,8 +110,10 @@ func (c *Coordinator) schedule() *schedule {
 	res.workerSchedule = *ws
 	res.dataServerSchedule = *dss
 	res.aggregatorSchedule = *as
+
+	c.sendToDataServers(dss)
+
 	return res
-	return nil
 }
 
 // TODO later
@@ -131,6 +133,7 @@ func (c *Coordinator) sendToDataServers(schedule *dataServerSchedule) []error {
 	// Use waitgroup to block until all requests have completed
 	var wg sync.WaitGroup
 
+	fmt.Println(len(schedule.assignments))
 	index := 0
 	for ds, jobs := range schedule.assignments {
 		// Make request
@@ -150,10 +153,11 @@ func (c *Coordinator) sendToDataServers(schedule *dataServerSchedule) []error {
 			}
 		}
 		// Send to dataserver
-		dsConn, err := c.service.GetPeer("DataServer", ds)
+		dsConn, err := c.service.GetPeer("Data_Server", ds)
 		if err != nil {
 			errs[index] = err
 		}
+		fmt.Println("hello")
 		reply := service.DataServerReceiveScheduleResponse{}
 		// Make request with callback
 		c.service.UniCast(dsConn, service.DataServerReceiveSchedule, req, &reply, func(reply interface{}, err error) {

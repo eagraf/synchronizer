@@ -44,13 +44,22 @@ type ServiceInitiator interface {
 }
 
 // DefaultTopology is a base topology that can be used for testing
+// TODO this should be configured somewhere
 var DefaultTopology map[string]map[string]bool = map[string]map[string]bool{
 	"Test": {
 		"Test": true,
 	},
 	"Coordinator": {
-		"Selector": true,
+		"Selector":    true,
+		"Aggregator":  true,
+		"Data_Server": true,
 	},
+	/*"Aggregator": {
+		"Coordinator": true,
+	},
+	"Data_Server": {
+		"Coordinator": true,
+	},*/
 }
 
 // Below are a bunch of helper functions (TODO need to be moved for better code organization)
