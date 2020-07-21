@@ -79,6 +79,12 @@ func TestCoordinatorSchedule(t *testing.T) {
 
 	// Test scheduling receives
 	if count := service.CountTags(sp, "DataServerReceiveSchedule"); count != 3 {
-		t.Errorf("Incorrect number of worker sends: %d", count)
+		t.Errorf("Incorrect number of DataServerReceiveSchedule logs: %d", count)
+	}
+	if count := service.CountTags(sp, "AggregatorReceiveSchedule"); count != 3 {
+		t.Errorf("Incorrect number of AggregatorReceiveSchedule logs: %d", count)
+	}
+	if count := service.CountTags(sp, "SchedulingError"); count != 0 {
+		t.Errorf("Incorrect number of SchedulingError logs: %d", count)
 	}
 }

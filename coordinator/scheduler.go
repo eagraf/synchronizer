@@ -60,7 +60,6 @@ type Task struct {
 }
 
 func (c *Coordinator) schedule() *schedule {
-	fmt.Println("Schedule!")
 	res := new(schedule)
 
 	// Assign tasks to workers
@@ -79,8 +78,7 @@ func (c *Coordinator) schedule() *schedule {
 	// Task assignments need to be allocated to data servers and aggregators
 	dataServerConnections, err := c.service.AllPeersOfType("Data_Server")
 	if err != nil {
-		// TODO Handle somehow
-		fmt.Println("error!")
+		c.service.Log("SchedulingError", "Data Serversunavailable")
 	}
 	// Map connections into dataserver struct
 	dataServers := make([]*dataServer, len(dataServerConnections))
@@ -94,8 +92,7 @@ func (c *Coordinator) schedule() *schedule {
 
 	aggregatorConnections, err := c.service.AllPeersOfType("Aggregator")
 	if err != nil {
-		// TODO Log it?
-		fmt.Println("error!")
+		c.service.Log("SchedulingError", "Aggregators unavailable")
 	}
 	// Map connections into aggregator struct
 	aggregators := make([]*aggregator, len(aggregatorConnections))
@@ -111,7 +108,17 @@ func (c *Coordinator) schedule() *schedule {
 	res.dataServerSchedule = *dss
 	res.aggregatorSchedule = *as
 
-	c.sendToDataServers(dss)
+	errs := c.sendToDataServers(dss)
+	if len(errs) != 0 {
+		c.service.Log("SchedulingError", fmt.Sprintf("%d errors sending to Data Servers", len(errs)))
+	}
+
+	fmt.Println("hello")
+	errs = c.sendToAggregators(as)
+	if len(errs) != 0 {
+		c.service.Log("SchedulingError", fmt.Sprintf("%d errors sending to Aggregators", len(errs)))
+		fmt.Println(errs)
+	}
 
 	return res
 }
@@ -126,15 +133,14 @@ type dsSchedule = service.DataServerReceiveScheduleRequest_Schedule
 type dsScheduleJob = service.DataServerReceiveScheduleRequest_Schedule_Job
 type dsScheduleWorker = service.DataServerReceiveScheduleRequest_Schedule_Worker
 
+// Concurrently send schedule to each data server. Return list of errors and count.
 func (c *Coordinator) sendToDataServers(schedule *dataServerSchedule) []error {
 	// Return list of errors
-	errs := make([]error, len(schedule.assignments))
+	errs := make([]error, 0)
 
 	// Use waitgroup to block until all requests have completed
 	var wg sync.WaitGroup
 
-	fmt.Println(len(schedule.assignments))
-	index := 0
 	for ds, jobs := range schedule.assignments {
 		// Make request
 		req := &dsScheduleRequest{}
@@ -155,9 +161,8 @@ func (c *Coordinator) sendToDataServers(schedule *dataServerSchedule) []error {
 		// Send to dataserver
 		dsConn, err := c.service.GetPeer("Data_Server", ds)
 		if err != nil {
-			errs[index] = err
+			errs = append(errs, err)
 		}
-		fmt.Println("hello")
 		reply := service.DataServerReceiveScheduleResponse{}
 		// Make request with callback
 		c.service.UniCast(dsConn, service.DataServerReceiveSchedule, req, &reply, func(reply interface{}, err error) {
@@ -166,17 +171,64 @@ func (c *Coordinator) sendToDataServers(schedule *dataServerSchedule) []error {
 			defer wg.Done()
 
 			if err != nil {
-				errs[index] = err
+				errs = append(errs, err)
 			}
 		})
-
-		index++
 	}
 	// Wait for all calls to complete
 	wg.Wait()
 	return errs
 }
 
-func sendToAggregators(as *aggregatorSchedule) {
+type agScheduleRequest = service.AggregatorReceiveScheduleRequest
+type agSchedule = service.AggregatorReceiveScheduleRequest_Schedule
+type agScheduleJob = service.AggregatorReceiveScheduleRequest_Schedule_Job
+type agScheduleWorker = service.AggregatorReceiveScheduleRequest_Schedule_Worker
+
+func (c *Coordinator) sendToAggregators(schedule *aggregatorSchedule) []error {
+	// Return list of errors
+	errs := make([]error, 0)
+
+	// Use waitgroup to block until all requests have completed
+	var wg sync.WaitGroup
+
+	for as, jobs := range schedule.assignments {
+		fmt.Println("bb")
+		// Make request
+		req := &agScheduleRequest{}
+		sched := &agSchedule{
+			Jobs: make([]*agScheduleJob, len(jobs)),
+		}
+		req.Schedule = sched
+
+		// Fill in jobs
+		for i, job := range jobs {
+			sched.Jobs[i] = &agScheduleJob{
+				JobUUID:    c.activeJobs[job].JobUUID,
+				JobType:    c.activeJobs[job].JobType,
+				TaskSize:   int32(c.activeJobs[job].TaskSize),
+				TaskNumber: int32(c.activeJobs[job].TaskNumber),
+			}
+		}
+		// Send to dataserver
+		agConn, err := c.service.GetPeer("Aggregator", as)
+		if err != nil {
+			errs = append(errs, err)
+		}
+		reply := service.AggregatorReceiveScheduleResponse{}
+		// Make request with callback
+		c.service.UniCast(agConn, service.AggregatorReceiveSchedule, req, &reply, func(reply interface{}, err error) {
+			// Add each call thread to waitgroup, and then remove when done
+			wg.Add(1)
+			defer wg.Done()
+
+			if err != nil {
+				errs = append(errs, err)
+			}
+		})
+	}
+	// Wait for all calls to complete
+	wg.Wait()
+	return errs
 
 }
