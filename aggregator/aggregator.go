@@ -36,7 +36,12 @@ func NewAggregator(si service.ServiceInitiator) (*Aggregator, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	a.service = service
+
+	// TODO should be refactored out
+	si.ConnectService(service)
+
+	service.Log("AggregatorStarted", "Aggregator successfully started")
+
 	return a, nil
 }
